@@ -1,4 +1,3 @@
-// api/http/handlers.go
 package http
 
 import (
@@ -10,14 +9,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ProfileHandler handles HTTP requests for profiles
+// and delegates to the ProfileService business logic.
 type ProfileHandler struct {
 	svc usecases.ProfileService
 }
 
+// NewProfileHandler constructs a new ProfileHandler
 func NewProfileHandler(svc usecases.ProfileService) *ProfileHandler {
 	return &ProfileHandler{svc: svc}
 }
 
+// RegisterRoutes registers profile routes on the Gin engine
 func (h *ProfileHandler) RegisterRoutes(r *gin.Engine) {
 	grp := r.Group("/profile")
 	{
@@ -30,6 +33,7 @@ func (h *ProfileHandler) RegisterRoutes(r *gin.Engine) {
 	}
 }
 
+// Health endpoint
 func (h *ProfileHandler) Health(c *gin.Context) {
 	if err := h.svc.Health(c.Request.Context()); err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "db down"})
@@ -38,6 +42,7 @@ func (h *ProfileHandler) Health(c *gin.Context) {
 	}
 }
 
+// Create handles POST /profile
 func (h *ProfileHandler) Create(c *gin.Context) {
 	userID := c.GetHeader("X-User-ID")
 	if userID == "" {
@@ -63,6 +68,7 @@ func (h *ProfileHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, out)
 }
 
+// GetByID handles GET /profile/:id
 func (h *ProfileHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	out, err := h.svc.GetProfile(c.Request.Context(), id)
@@ -77,6 +83,7 @@ func (h *ProfileHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
+// List handles GET /profile
 func (h *ProfileHandler) List(c *gin.Context) {
 	list, err := h.svc.ListProfiles(c.Request.Context())
 	if err != nil {
@@ -86,8 +93,31 @@ func (h *ProfileHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
+// Update handles PUT /profile/:id
+// Only the owner of the profile can update it.
 func (h *ProfileHandler) Update(c *gin.Context) {
+	userID := c.GetHeader("X-User-ID")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing X-User-ID header"})
+		return
+	}
 	id := c.Param("id")
+
+	// Fetch existing profile to verify ownership
+	existing, err := h.svc.GetProfile(c.Request.Context(), id)
+	if err != nil {
+		if err == usecases.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	if existing.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized to update this profile"})
+		return
+	}
+
 	var req domain.ProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -110,8 +140,31 @@ func (h *ProfileHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
+// Delete handles DELETE /profile/:id
+// Only the owner of the profile can delete it.
 func (h *ProfileHandler) Delete(c *gin.Context) {
+	userID := c.GetHeader("X-User-ID")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing X-User-ID header"})
+		return
+	}
 	id := c.Param("id")
+
+	// Fetch existing profile to verify ownership
+	existing, err := h.svc.GetProfile(c.Request.Context(), id)
+	if err != nil {
+		if err == usecases.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	if existing.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized to delete this profile"})
+		return
+	}
+
 	if err := h.svc.DeleteProfile(c.Request.Context(), id); err != nil {
 		if err == usecases.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
