@@ -9,19 +9,24 @@ import (
 	"syscall"
 	"time"
 
-	handler "feed_service/api/http"
-	"feed_service/cmd/config"
-	"feed_service/repository/db"
-	feedService "feed_service/usecases/service"
+	httpHandler "auth_service/api/http"
+	"auth_service/cmd/config"
+	"auth_service/jwt"
+	"auth_service/repository/db"
+	authService "auth_service/usecases/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// Config
+	// Load configuration
 	dbCfg := config.LoadDBConfig()
+	svcCfg := config.LoadServiceConfig()
 
-	// DB init
+	// Initialize JWT secret
+	jwt.Init(svcCfg.Jwt_secret)
+
+	// Initialize GORM DB
 	gormDB, err := db.InitDB(dbCfg)
 	if err != nil {
 		log.Fatalf("failed to init DB: %v", err)
@@ -36,7 +41,7 @@ func main() {
 		}
 	}()
 
-	// health db
+	// Verify DB connectivity
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := sqlDB.PingContext(ctx); err != nil {
@@ -44,28 +49,31 @@ func main() {
 	}
 	log.Println("Database connection is healthy")
 
-	// gin
+	// Set up Gin
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
 
-	repo := db.NewFeedRepo(gormDB)
-	svc := feedService.NewFeedService(repo)
-	h := handler.NewFeedHandler(svc)
-	h.RegisterRoutes(router)
+	// Wire up repository, service, and handler
+	userRepo := db.NewUserRepo(gormDB)
+	svc := authService.NewAuthService(userRepo, svcCfg.Profile_service_utl)
+	handler := httpHandler.NewAuthHandler(svc)
+	handler.RegisterRoutes(router)
 
+	// Start HTTP server
 	srv := &http.Server{
-		Addr:    ":8081",
+		Addr:    ":8082",
 		Handler: router,
 	}
+
 	go func() {
-		log.Printf("Server started on %s", srv.Addr)
+		log.Printf("Auth service listening on %s", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %v", err)
+			log.Fatalf("listen error: %v", err)
 		}
 	}()
 
-	// SIGINT/SIGTERM
+	// Wait for shutdown signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
@@ -75,7 +83,7 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("Server Shutdown failed: %v", err)
+		log.Fatalf("Server shutdown failed: %v", err)
 	}
 
 	log.Println("Server exited cleanly")
