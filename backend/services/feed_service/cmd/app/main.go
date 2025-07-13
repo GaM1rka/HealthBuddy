@@ -55,7 +55,7 @@ func main() {
 	h.RegisterRoutes(router)
 
 	srv := &http.Server{
-		Addr:    ":8081",
+		Addr:    ":8082",
 		Handler: router,
 	}
 	go func() {

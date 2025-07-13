@@ -62,7 +62,7 @@ func main() {
 
 	// Start HTTP server
 	srv := &http.Server{
-		Addr:    ":8082",
+		Addr:    ":8083",
 		Handler: router,
 	}
 

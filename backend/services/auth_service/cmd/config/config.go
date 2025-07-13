@@ -22,8 +22,8 @@ type ServiceConfig struct {
 	Jwt_secret          string
 }
 
-func LoadServiceConfig() ServiceConfig {
-	return ServiceConfig{
+func LoadServiceConfig() *ServiceConfig {
+	return &ServiceConfig{
 		Profile_service_utl: os.Getenv("PROFILE_SERVICE_URL"),
 		Jwt_secret:          os.Getenv("JWT_SECRET"),
 	}

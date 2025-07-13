@@ -25,8 +25,8 @@ services:
       DB_USER: ${DB_PROFILE_USER}
       DB_PASSWORD: ${DB_PROFILE_PASSWORD}
       DB_NAME: ${DB_PROFILE_NAME}
-    ports:
-      - "8080:8080"
+    expose:
+      - "8081"
     depends_on:
       profile_db:
         condition: service_healthy
@@ -57,8 +57,8 @@ services:
       DB_USER: ${DB_FEED_USER}
       DB_PASSWORD: ${DB_FEED_PASSWORD}
       DB_NAME: ${DB_FEED_NAME}
-    ports:
-      - "8081:8081"
+    expose:
+      - "8082"
     depends_on:
       feed_db:
         condition: service_healthy
@@ -91,11 +91,27 @@ services:
       DB_USER: ${DB_AUTH_USER}
       DB_PASSWORD: ${DB_AUTH_PASSWORD}
       DB_NAME: ${DB_AUTH_NAME}
-    ports:
-      - "8082:8082"
+    expose:
+      - "8083"
     depends_on:
       auth_db:
         condition: service_healthy
+
+  gateway:
+    build:
+      context: ./backend/services/gateway_service 
+      dockerfile: Dockerfile
+    environment:
+      PROFILE_SERVICE_URL: ${PROFILE_SERVICE_URL}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      FEED_SERVICE_URL: ${FEED_SERVICE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth
+      - feed
+      - profile
 
 volumes:
   pg_profile_data:
