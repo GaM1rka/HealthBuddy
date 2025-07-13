@@ -43,20 +43,35 @@ func (r *userRepo) Create(ctx context.Context, u *domain.User) error {
 	return r.db.WithContext(ctx).Create(u).Error
 }
 
-func (r *userRepo) Delete(ctx context.Context, u *domain.User) error {
-	result := r.db.WithContext(ctx).
+func (r *userRepo) Delete(ctx context.Context, userID string) error {
+	result := r.db.
+		WithContext(ctx).
 		Unscoped().
-		Where("email = ?", u.Email).
-		Or("username = ?", u.Username).
+		Where("id = ?", userID).
 		Delete(&domain.User{})
 	return result.Error
 }
 
 // Search user by username
-func (r *userRepo) FindByUsername(ctx context.Context, username string) (*domain.User, error) {
+func (r *userRepo) FindByUserName(ctx context.Context, username string) (*domain.User, error) {
 	var u domain.User
 	err := r.db.WithContext(ctx).
 		Where("username = ?", username).
+		First(&u).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, repository.ErrNotFound
+		}
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *userRepo) FindByUserID(ctx context.Context, userID string) (*domain.User, error) {
+	var u domain.User
+	err := r.db.WithContext(ctx).
+		Where("id = ?", userID).
 		First(&u).
 		Error
 	if err != nil {

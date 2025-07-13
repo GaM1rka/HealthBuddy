@@ -13,25 +13,25 @@ import (
 // main structure
 type Profile struct {
 	gorm.Model
-	UserID   string `gorm:"type:char(36);uniqueIndex" json:"user_id" validate:"required,uuid4"`
-	Username string `gorm:"size:30" json:"username" validate:"username"`
-	Bio      string `gorm:"size:500" json:"bio,omitempty" validate:"max=500"`
-	Avatar   string `json:"avatar,omitempty" validate:"avatar_url"`
+	UserID string `gorm:"type:char(36);uniqueIndex" json:"user_id" validate:"required,uuid4"`
+	Name   string `gorm:"size:30" json:"name" validate:"name"`
+	Bio    string `gorm:"size:500" json:"bio,omitempty" validate:"max=500"`
+	Avatar string `json:"avatar,omitempty" validate:"avatar_url"`
 }
 
 // post/put requests
 type ProfileRequest struct {
-	Name   string `json:"name" validate:"required,username"`
-	Bio    string `json:"bio" validate:"max=500"`
-	Avatar string `json:"avatar" validate:"avatar_url"`
+	Name   *string `json:"name,omitempty"`
+	Bio    *string `json:"bio,omitempty"`
+	Avatar *string `json:"avatar_url,omitempty"`
 }
 
 // get request
 type ProfileResponse struct {
 	UserID    string    `json:"user_id"`
-	Username  string    `json:"username"`
-	Bio       string    `json:"bio,omitempty"`
-	Avatar    string    `json:"avatar,omitempty"`
+	Name      string    `json:"name"`
+	Bio       string    `json:"bio"`
+	Avatar    string    `json:"avatar"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -39,7 +39,7 @@ type ProfileResponse struct {
 func (p *Profile) ToResponse() ProfileResponse {
 	return ProfileResponse{
 		UserID:    p.UserID,
-		Username:  p.Username,
+		Name:      p.Name,
 		Bio:       p.Bio,
 		Avatar:    p.Avatar,
 		CreatedAt: p.CreatedAt,
@@ -53,7 +53,7 @@ var (
 
 func init() {
 	validate = validator.New()
-	_ = validate.RegisterValidation("username", validateUsername)
+	_ = validate.RegisterValidation("name", validateUsername)
 	_ = validate.RegisterValidation("avatar_url", validateAvatarURL)
 }
 

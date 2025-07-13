@@ -20,6 +20,7 @@ import (
 func main() {
 	// Config
 	dbCfg := config.LoadDBConfig()
+	svcCfg := config.LoafServiceCfg()
 
 	// DB init
 	gormDB, err := db.InitDB(dbCfg)
@@ -50,7 +51,7 @@ func main() {
 	router.Use(gin.Logger(), gin.Recovery())
 
 	repo := db.NewProfileRepo(gormDB)
-	svc := profileService.NewProfileService(repo)
+	svc := profileService.NewProfileService(repo, svcCfg.Auth_service_url)
 	h := handler.NewProfileHandler(svc)
 	h.RegisterRoutes(router)
 

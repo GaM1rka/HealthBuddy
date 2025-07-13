@@ -64,7 +64,7 @@ func (s *authService) Register(ctx context.Context, creds domain.Credentials) (s
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/profile", s.profileSvcURL), bytes.NewReader(body))
 	if err != nil {
-		_ = s.repo.Delete(ctx, user)
+		_ = s.repo.Delete(ctx, userID)
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -72,13 +72,13 @@ func (s *authService) Register(ctx context.Context, creds domain.Credentials) (s
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		_ = s.repo.Delete(ctx, user)
+		_ = s.repo.Delete(ctx, userID)
 		return "", fmt.Errorf("failed to create profile: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		_ = s.repo.Delete(ctx, user)
+		_ = s.repo.Delete(ctx, userID)
 		return "", fmt.Errorf("profile service returned status %d", resp.StatusCode)
 	}
 
@@ -91,7 +91,7 @@ func (s *authService) Register(ctx context.Context, creds domain.Credentials) (s
 }
 
 func (s *authService) Login(ctx context.Context, creds domain.Credentials) (string, error) {
-	user, err := s.repo.FindByUsername(ctx, creds.Username)
+	user, err := s.repo.FindByUserName(ctx, creds.Username)
 	if err != nil {
 		return "", err
 	}
@@ -105,4 +105,13 @@ func (s *authService) Login(ctx context.Context, creds domain.Credentials) (stri
 
 func (s *authService) Health(ctx context.Context) error {
 	return s.repo.Health(ctx)
+}
+
+func (s *authService) DeleteUser(ctx context.Context, userID string) error {
+	return s.repo.Delete(ctx, userID)
+}
+
+// FindByID
+func (s *authService) FindByID(ctx context.Context, userID string) (*domain.User, error) {
+	return s.repo.FindByUserID(ctx, userID)
 }

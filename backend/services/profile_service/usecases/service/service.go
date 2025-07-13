@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"net/http"
 
 	"profile_service/domain"
 	"profile_service/repository"
@@ -10,12 +13,18 @@ import (
 
 // profileService
 type profileService struct {
-	repo repository.ProfileRepository
+	repo       repository.ProfileRepository
+	authUrl    string
+	httpClient *http.Client
 }
 
 // NewProfileService
-func NewProfileService(repo repository.ProfileRepository) usecases.ProfileService {
-	return &profileService{repo: repo}
+func NewProfileService(repo repository.ProfileRepository, authUrl string) usecases.ProfileService {
+	return &profileService{
+		repo:       repo,
+		authUrl:    authUrl,
+		httpClient: http.DefaultClient,
+	}
 }
 
 func (s *profileService) Health(ctx context.Context) error {
@@ -23,11 +32,24 @@ func (s *profileService) Health(ctx context.Context) error {
 }
 
 func (s *profileService) CreateProfile(ctx context.Context, userID string, req domain.ProfileRequest) (domain.ProfileResponse, error) {
+	name := ""
+	if req.Name != nil {
+		name = *req.Name
+	}
+	bio := ""
+	if req.Bio != nil {
+		bio = *req.Bio
+	}
+	avatar := ""
+	if req.Avatar != nil {
+		avatar = *req.Avatar
+	}
+
 	p := domain.Profile{
-		UserID:   userID,
-		Username: req.Name,
-		Bio:      req.Bio,
-		Avatar:   req.Avatar,
+		UserID: userID,
+		Name:   name,
+		Bio:    bio,
+		Avatar: avatar,
 	}
 	if err := s.repo.Create(&p); err != nil {
 		return domain.ProfileResponse{}, err
@@ -60,9 +82,15 @@ func (s *profileService) UpdateProfile(ctx context.Context, userID string, req d
 	if err != nil {
 		return domain.ProfileResponse{}, err
 	}
-	p.Username = req.Name
-	p.Bio = req.Bio
-	p.Avatar = req.Avatar
+	if req.Name != nil {
+		p.Name = *req.Name
+	}
+	if req.Bio != nil {
+		p.Bio = *req.Bio
+	}
+	if req.Avatar != nil {
+		p.Avatar = *req.Avatar
+	}
 	if err := s.repo.Update(p); err != nil {
 		return domain.ProfileResponse{}, err
 	}
@@ -70,5 +98,26 @@ func (s *profileService) UpdateProfile(ctx context.Context, userID string, req d
 }
 
 func (s *profileService) DeleteProfile(ctx context.Context, userID string) error {
-	return s.repo.Delete(userID)
+	if err := s.repo.Delete(userID); err != nil {
+		return err
+	}
+	// DELETE к Auth-сервису
+	// route DELETE /auth/users/:id
+	authEndpoint := fmt.Sprintf("%s/auth/user/%s", s.authUrl, userID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, authEndpoint, nil)
+	if err != nil {
+		log.Printf("failed to build auth delete request: %v", err)
+		return nil
+	}
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		log.Printf("failed to call auth service delete: %v", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		log.Printf("auth service delete returned status %d for user %s", resp.StatusCode, userID)
+	}
+	return nil
 }

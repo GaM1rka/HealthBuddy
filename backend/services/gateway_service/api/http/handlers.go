@@ -18,9 +18,12 @@ func RegisterRoutes(r *gin.Engine, svc *service.GatewayService) {
 	}
 
 	// 2) protected JWT-middleware
-	protected := r.Group("/", middleware.JWTMiddleware(svc.JWTSecret))
+	protected := r.Group("/", middleware.JWTMiddleware(svc.JWTSecret, svc.AuthURL))
 	{
+		protected.Any("/auth/user/*proxyPath", svc.AuthProxy())
+		protected.Any("/profile", svc.ProfileProxy())
 		protected.Any("/profile/*proxyPath", svc.ProfileProxy())
+		protected.Any("/feed", svc.FeedProxy())
 		protected.Any("/feed/*proxyPath", svc.FeedProxy())
 	}
 }

@@ -24,9 +24,11 @@ func NewAuthHandler(svc usecases.AuthService) *AuthHandler {
 func (h *AuthHandler) RegisterRoutes(r *gin.Engine) {
 	grp := r.Group("/auth")
 	{
-		grp.GET("/health", h.Health) // ← добавили health
+		grp.GET("/health", h.Health)
 		grp.POST("/register", h.Register)
 		grp.POST("/login", h.Login)
+		grp.GET("/user/:id", h.GetUserByID)
+		grp.DELETE("/user/:id", h.DeleteUser)
 	}
 }
 
@@ -84,4 +86,33 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
+}
+
+// DELETE /auth/user/:id
+func (h *AuthHandler) DeleteUser(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.svc.DeleteUser(c.Request.Context(), id); err != nil {
+		if err == usecases.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// GET /auth/user/:id
+func (h *AuthHandler) GetUserByID(c *gin.Context) {
+	id := c.Param("id")
+	user, err := h.svc.FindByID(c.Request.Context(), id)
+	if err != nil {
+		if err == usecases.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, user)
 }

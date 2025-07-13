@@ -26,10 +26,10 @@ func (h *ProfileHandler) RegisterRoutes(r *gin.Engine) {
 	{
 		grp.GET("/health", h.Health)
 		grp.POST("", h.Create)
-		grp.GET("", h.List)
-		grp.GET("/:id", h.GetByID)
-		grp.PUT("/:id", h.Update)
-		grp.DELETE("/:id", h.Delete)
+		/* grp.GET("", h.List) */
+		grp.GET("", h.GetByID)
+		grp.PUT("", h.Update)
+		grp.DELETE("", h.Delete)
 	}
 }
 
@@ -68,10 +68,10 @@ func (h *ProfileHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, out)
 }
 
-// GetByID handles GET /profile/:id
+// GetByID handles GET /profile
 func (h *ProfileHandler) GetByID(c *gin.Context) {
-	id := c.Param("id")
-	out, err := h.svc.GetProfile(c.Request.Context(), id)
+	userID := c.GetHeader("X-User-ID")
+	out, err := h.svc.GetProfile(c.Request.Context(), userID)
 	if err != nil {
 		if err == usecases.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -84,16 +84,16 @@ func (h *ProfileHandler) GetByID(c *gin.Context) {
 }
 
 // List handles GET /profile
-func (h *ProfileHandler) List(c *gin.Context) {
+/* func (h *ProfileHandler) List(c *gin.Context) {
 	list, err := h.svc.ListProfiles(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, list)
-}
+} */
 
-// Update handles PUT /profile/:id
+// Update handles PUT /profile
 // Only the owner of the profile can update it.
 func (h *ProfileHandler) Update(c *gin.Context) {
 	userID := c.GetHeader("X-User-ID")
@@ -101,10 +101,8 @@ func (h *ProfileHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing X-User-ID header"})
 		return
 	}
-	id := c.Param("id")
-
 	// Fetch existing profile to verify ownership
-	existing, err := h.svc.GetProfile(c.Request.Context(), id)
+	existing, err := h.svc.GetProfile(c.Request.Context(), userID)
 	if err != nil {
 		if err == usecases.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -128,7 +126,7 @@ func (h *ProfileHandler) Update(c *gin.Context) {
 		return
 	}
 
-	out, err := h.svc.UpdateProfile(c.Request.Context(), id, req)
+	out, err := h.svc.UpdateProfile(c.Request.Context(), userID, req)
 	if err != nil {
 		if err == usecases.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -148,10 +146,8 @@ func (h *ProfileHandler) Delete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing X-User-ID header"})
 		return
 	}
-	id := c.Param("id")
-
 	// Fetch existing profile to verify ownership
-	existing, err := h.svc.GetProfile(c.Request.Context(), id)
+	existing, err := h.svc.GetProfile(c.Request.Context(), userID)
 	if err != nil {
 		if err == usecases.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -165,7 +161,7 @@ func (h *ProfileHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.DeleteProfile(c.Request.Context(), id); err != nil {
+	if err := h.svc.DeleteProfile(c.Request.Context(), userID); err != nil {
 		if err == usecases.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		} else {

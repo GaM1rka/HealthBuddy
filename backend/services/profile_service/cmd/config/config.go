@@ -17,6 +17,16 @@ type DBConfig struct {
 	ConnMaxLifetime time.Duration
 }
 
+type ServiceConfig struct {
+	Auth_service_url string
+}
+
+func LoafServiceCfg() ServiceConfig {
+	return ServiceConfig{
+		Auth_service_url: os.Getenv("AUTH_SERVICE_URL"),
+	}
+}
+
 func LoadDBConfig() DBConfig {
 	return DBConfig{
 		Host:            os.Getenv("DB_HOST"),
