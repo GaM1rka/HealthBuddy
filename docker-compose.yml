@@ -26,6 +26,7 @@ services:
       DB_PASSWORD: ${DB_PROFILE_PASSWORD}
       DB_NAME: ${DB_PROFILE_NAME}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      FEED_SERVICE_URL: ${FEED_SERVICE_URL}
     expose:
       - "8081"
     depends_on:

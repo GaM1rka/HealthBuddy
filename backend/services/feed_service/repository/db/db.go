@@ -149,3 +149,19 @@ func InitDB(dbConfig config.DBConfig) (*gorm.DB, error) {
 	log.Println("Database connection established and migrations applied")
 	return db, nil
 }
+
+func (r *pgFeedRepo) ListPublicationsByUser(ctx context.Context, userID string) ([]domain.Publication, error) {
+	var pubs []domain.Publication
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&pubs).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, repository.ErrNotFound
+		}
+		return nil, err
+	}
+	return pubs, nil
+}

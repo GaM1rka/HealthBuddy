@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"sort"
 
 	"feed_service/domain"
 	repository "feed_service/repository"
@@ -32,7 +33,7 @@ func (s *feedService) CreatePublication(ctx context.Context, userID string, req 
 	pub := &domain.Publication{
 		PostID:  domain.NewUUID(),
 		UserID:  userID,
-		Name:    req.Name,
+		Title:   req.Title,
 		Content: req.Content,
 	}
 	if err := s.repository.CreatePublication(pub); err != nil {
@@ -59,6 +60,11 @@ func (s *feedService) ListPublications(ctx context.Context) ([]domain.Publicatio
 	if err != nil {
 		return nil, err
 	}
+	// most fresh publications first
+	sort.Slice(pubs, func(i, j int) bool {
+		return pubs[i].CreatedAt.After(pubs[j].CreatedAt)
+	})
+
 	out := make([]domain.PublicationResponse, len(pubs))
 	for i, p := range pubs {
 		out[i] = p.ToResponse()
@@ -72,7 +78,7 @@ func (s *feedService) UpdatePublication(ctx context.Context, postID string, req 
 	if err != nil {
 		return domain.PublicationResponse{}, err
 	}
-	pub.Name = req.Name
+	pub.Title = req.Title
 	pub.Content = req.Content
 	if err := s.repository.UpdatePublication(pub); err != nil {
 		return domain.PublicationResponse{}, err
@@ -117,6 +123,10 @@ func (s *feedService) ListComments(ctx context.Context, postID string) ([]domain
 	if err != nil {
 		return nil, err
 	}
+	//most fresh comments
+	sort.Slice(comments, func(i, j int) bool {
+		return comments[i].CreatedAt.After(comments[j].CreatedAt)
+	})
 	out := make([]domain.CommentResponse, len(comments))
 	for i, c := range comments {
 		out[i] = c.ToResponse()
@@ -140,4 +150,24 @@ func (s *feedService) UpdateComment(ctx context.Context, req domain.PutCommentRe
 // DeleteComment deletes a comment
 func (s *feedService) DeleteComment(ctx context.Context, commentID string) error {
 	return s.repository.DeleteComment(commentID)
+}
+
+// ListPublicationsByUser returns all publications for a given user, newest first.
+func (s *feedService) ListPublicationsByUser(ctx context.Context, userID string) ([]domain.PublicationResponse, error) {
+	// Retrieve domain publications from the repository
+	pubs, err := s.repository.ListPublicationsByUser(ctx, userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, usecases.ErrNotFound
+		}
+		return nil, err
+	}
+
+	// Map domain.Publication to PublicationResponse
+	out := make([]domain.PublicationResponse, len(pubs))
+	for i, p := range pubs {
+		out[i] = p.ToResponse()
+	}
+
+	return out, nil
 }

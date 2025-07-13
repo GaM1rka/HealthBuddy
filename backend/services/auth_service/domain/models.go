@@ -9,10 +9,15 @@ import (
 )
 
 // Credentials holds login or registration data
-type Credentials struct {
+type RegistrCredentials struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 	Email    string `json:"email" binding:"required"`
+}
+
+type LoginCredentials struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 // User represents a registered user
@@ -34,7 +39,7 @@ var (
 )
 
 // Validate Credentials
-func (c *Credentials) Validate() error {
+func (c *RegistrCredentials) Validate() error {
 	if len(c.Username) < 3 || len(c.Username) > 30 {
 		return errors.New("username must be between 3 and 30 characters")
 	}
@@ -43,6 +48,16 @@ func (c *Credentials) Validate() error {
 	}
 	if !emailRegex.MatchString(c.Email) {
 		return errors.New("invalid email format")
+	}
+	return nil
+}
+
+func (c *LoginCredentials) Validate() error {
+	if len(c.Username) < 3 || len(c.Username) > 30 {
+		return errors.New("username must be between 3 and 30 characters")
+	}
+	if len(c.Password) < 8 {
+		return errors.New("password must be at least 8 characters")
 	}
 	return nil
 }

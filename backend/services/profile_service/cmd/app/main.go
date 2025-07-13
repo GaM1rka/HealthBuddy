@@ -51,7 +51,7 @@ func main() {
 	router.Use(gin.Logger(), gin.Recovery())
 
 	repo := db.NewProfileRepo(gormDB)
-	svc := profileService.NewProfileService(repo, svcCfg.Auth_service_url)
+	svc := profileService.NewProfileService(repo, svcCfg.Auth_service_url, svcCfg.Feed_service_url)
 	h := handler.NewProfileHandler(svc)
 	h.RegisterRoutes(router)
 

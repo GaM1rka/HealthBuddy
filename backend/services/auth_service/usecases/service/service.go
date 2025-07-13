@@ -28,7 +28,7 @@ func NewAuthService(r repository.UserRepo, profileSvcURL string) usecases.AuthSe
 	}
 }
 
-func (s *authService) Register(ctx context.Context, creds domain.Credentials) (string, error) {
+func (s *authService) Register(ctx context.Context, creds domain.RegistrCredentials) (string, error) {
 	if err := creds.Validate(); err != nil {
 		return "", err
 	}
@@ -90,7 +90,7 @@ func (s *authService) Register(ctx context.Context, creds domain.Credentials) (s
 	return token, nil
 }
 
-func (s *authService) Login(ctx context.Context, creds domain.Credentials) (string, error) {
+func (s *authService) Login(ctx context.Context, creds domain.LoginCredentials) (string, error) {
 	user, err := s.repo.FindByUserName(ctx, creds.Username)
 	if err != nil {
 		return "", err

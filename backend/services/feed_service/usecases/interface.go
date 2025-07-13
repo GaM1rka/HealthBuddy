@@ -19,6 +19,7 @@ type FeedService interface {
 	ListPublications(ctx context.Context) ([]domain.PublicationResponse, error)
 	UpdatePublication(ctx context.Context, postID string, req domain.PublicationRequest) (domain.PublicationResponse, error)
 	DeletePublication(ctx context.Context, postID string) error
+	ListPublicationsByUser(ctx context.Context, userID string) ([]domain.PublicationResponse, error)
 
 	// Comment operations
 	CreateComment(ctx context.Context, userID string, req domain.PostCommentRequest) (domain.CommentResponse, error)

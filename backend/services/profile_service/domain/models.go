@@ -26,13 +26,22 @@ type ProfileRequest struct {
 	Avatar *string `json:"avatar_url,omitempty"`
 }
 
-// get request
-type ProfileResponse struct {
+type PublicationResponse struct {
+	PostID    string    `json:"post_id"`
 	UserID    string    `json:"user_id"`
-	Name      string    `json:"name"`
-	Bio       string    `json:"bio"`
-	Avatar    string    `json:"avatar"`
+	Title     string    `json:"title"` // Title of the post
+	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// ProfileResponse represents the profile data sent back to clients.
+type ProfileResponse struct {
+	UserID    string                `json:"user_id"`
+	Name      string                `json:"name"`
+	Bio       string                `json:"bio"`
+	Avatar    string                `json:"avatar"`
+	CreatedAt time.Time             `json:"created_at"`
+	Posts     []PublicationResponse `json:"posts"`
 }
 
 // Converter

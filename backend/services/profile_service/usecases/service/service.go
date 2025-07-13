@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,14 +16,16 @@ import (
 type profileService struct {
 	repo       repository.ProfileRepository
 	authUrl    string
+	feedUrl    string
 	httpClient *http.Client
 }
 
 // NewProfileService
-func NewProfileService(repo repository.ProfileRepository, authUrl string) usecases.ProfileService {
+func NewProfileService(repo repository.ProfileRepository, authUrl string, feedUrl string) usecases.ProfileService {
 	return &profileService{
 		repo:       repo,
 		authUrl:    authUrl,
+		feedUrl:    feedUrl,
 		httpClient: http.DefaultClient,
 	}
 }
@@ -62,7 +65,34 @@ func (s *profileService) GetProfile(ctx context.Context, userID string) (domain.
 	if err != nil {
 		return domain.ProfileResponse{}, err
 	}
-	return p.ToResponse(), nil
+	resp := p.ToResponse()
+	feedURL := fmt.Sprintf("%s/feed/user/publications", s.feedUrl)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, feedURL, nil)
+	if err != nil {
+		log.Printf("GetProfile: build feed request failed: %v", err)
+		return resp, nil
+	}
+	req.Header.Set("X-User-ID", userID)
+	res, err := s.httpClient.Do(req)
+	if err != nil {
+		log.Printf("GetProfile: feed request failed: %v", err)
+		return resp, nil
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusOK {
+		var posts []domain.PublicationResponse
+		if err := json.NewDecoder(res.Body).Decode(&posts); err != nil {
+			log.Printf("GetProfile: decode feed response failed: %v", err)
+		} else {
+			resp.Posts = posts
+		}
+	} else {
+		log.Printf("GetProfile: feed service returned %d", res.StatusCode)
+	}
+
+	return resp, nil
 }
 
 func (s *profileService) ListProfiles(ctx context.Context) ([]domain.ProfileResponse, error) {

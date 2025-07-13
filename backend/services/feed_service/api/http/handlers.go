@@ -38,6 +38,7 @@ func (h *FeedHandler) RegisterRoutes(r *gin.Engine) {
 		grp.GET("/comments/:id", h.GetComment)
 		grp.PUT("/comments/:id", h.UpdateComment)
 		grp.DELETE("/comments/:id", h.DeleteComment)
+		grp.GET("/user/publications", h.ListUserPublications)
 	}
 }
 
@@ -99,6 +100,17 @@ func (h *FeedHandler) ListPublications(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, list)
+}
+
+func (h *FeedHandler) ListUserPublications(c *gin.Context) {
+	userID := c.GetHeader("X-User-ID")
+	// call usecase to get all publications for the user
+	posts, err := h.svc.ListPublicationsByUser(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, posts)
 }
 
 // UpdatePublication handles PUT /feed/publications/:id

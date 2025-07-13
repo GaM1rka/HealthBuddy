@@ -48,7 +48,7 @@ func (h *AuthHandler) Health(c *gin.Context) {
 
 // Register handles POST /auth/register
 func (h *AuthHandler) Register(c *gin.Context) {
-	var creds domain.Credentials
+	var creds domain.RegistrCredentials
 	if err := c.ShouldBindJSON(&creds); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -69,7 +69,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 // Login handles POST /auth/login
 func (h *AuthHandler) Login(c *gin.Context) {
-	var creds domain.Credentials
+	var creds domain.LoginCredentials
 	if err := c.ShouldBindJSON(&creds); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

@@ -14,6 +14,7 @@ type FeedRepository interface {
 	ListPublications() ([]domain.Publication, error)
 	UpdatePublication(pub *domain.Publication) error
 	DeletePublication(postID string) error
+	ListPublicationsByUser(ctx context.Context, userID string) ([]domain.Publication, error)
 
 	CreateComment(cmt *domain.Comment) error
 	ListComments(postID string) ([]domain.Comment, error)
