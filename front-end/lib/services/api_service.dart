@@ -37,35 +37,79 @@ class ApiService {
 
   Future<String> login(String email, String password) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/login'),
-      headers: await _getHeaders(),
+      Uri.parse('$_baseUrl/api/login'),
+      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
 
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
+
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final token = data['token'];
-      await _saveToken(token);
-      return token;
+      try {
+        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        
+        // Извлекаем токен из тела ответа
+        final token = responseData['token'] as String?;
+        
+        if (token != null && token.isNotEmpty) {
+          await _saveToken(token);
+          return token;
+        } else {
+          throw Exception('Token not found in response body');
+        }
+      } catch (e) {
+        throw Exception('Failed to parse response: $e');
+      }
     } else {
-      throw Exception('Failed to login');
+      // Пытаемся извлечь сообщение об ошибке из тела ответа
+      try {
+        final errorData = jsonDecode(response.body) as Map<String, dynamic>;
+        throw Exception(errorData['message'] ?? 'Login failed with status ${response.statusCode}');
+      } catch (_) {
+        throw Exception('Login failed with status ${response.statusCode}');
+      }
     }
   }
 
+
   Future<String> register(String username, String email, String password) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/register'),
-      headers: await _getHeaders(),
-      body: jsonEncode({'username': username, 'email': email, 'password': password}),
+      Uri.parse('$_baseUrl/api/register'),
+      headers: {'Content-Type': 'application/json'}, // Не используем _getHeaders() для регистрации
+      body: jsonEncode({
+        'username': username,
+        'email': email,
+        'password': password,
+      }),
     );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final token = data['token'];
-      await _saveToken(token);
-      return token;
+    print('Registration response status: ${response.statusCode}');
+    print('Registration response body: ${response.body}');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      try {
+        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        
+        // Извлекаем токен из тела ответа (аналогично логину)
+        final token = responseData['token'] as String?;
+        
+        if (token != null && token.isNotEmpty) {
+          await _saveToken(token);
+          return token;
+        } else {
+          throw Exception('Token not found in response body');
+        }
+      } catch (e) {
+        throw Exception('Failed to parse registration response: $e');
+      }
     } else {
-      throw Exception('Failed to register');
+      try {
+        final errorData = jsonDecode(response.body) as Map<String, dynamic>;
+        throw Exception(errorData['message'] ?? 'Registration failed with status ${response.statusCode}');
+      } catch (_) {
+        throw Exception('Registration failed with status ${response.statusCode}');
+      }
     }
   }
 

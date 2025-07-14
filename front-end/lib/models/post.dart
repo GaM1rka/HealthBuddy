@@ -15,10 +15,10 @@ class Post {
 
   factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
-      postId: json['id'] ?? json['postId'] ?? '',
-      userId: json['userId'] ?? '',
-      authorName: json['authorName'] ?? 'Unknown',
-      content: json['content'] ?? '',
+      postId: json['id'],
+      userId: json['userId'],
+      authorName: json['authorName'],
+      content: json['content'],
       createdAt: DateTime.parse(json['createdAt']),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:health_buddy_app/screens/feed_screen.dart';
 import 'package:health_buddy_app/screens/registration_screen.dart';
+import 'package:health_buddy_app/services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +15,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final ApiService _apiService = ApiService(); // Создаем экземпляр ApiService
+  bool _isLoading = false; // Флаг для отображения индикатора загрузки
 
   @override
   void dispose() {
@@ -22,14 +25,46 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Call API to login
-      // On success, save JWT and navigate to FeedScreen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const FeedScreen()),
-      );
+      setState(() {
+        _isLoading = true; // Показываем индикатор загрузки
+      });
+
+      try {
+        // Вызываем метод login из ApiService
+        await _apiService.login(
+          _emailController.text.trim(),
+          _passwordController.text.trim(),
+        );
+
+        // Если успешно, переходим на FeedScreen
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const FeedScreen()),
+          );
+        }
+      } catch (e) {
+        // Обработка ошибок
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Login failed: ${e.toString()}',
+                style: GoogleFonts.roboto(),
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false; // Скрываем индикатор загрузки
+          });
+        }
+      }
     }
   }
 
