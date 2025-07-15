@@ -19,6 +19,7 @@ func main() {
 		cfg.AuthServiceURL,
 		cfg.ProfileServiceURL,
 		cfg.FeedServiceURL,
+		cfg.FrontURL,
 		cfg.JWTSecret,
 	)
 

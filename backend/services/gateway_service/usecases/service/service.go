@@ -11,15 +11,17 @@ type GatewayService struct {
 	AuthURL    string
 	ProfileURL string
 	FeedURL    string
+	FrontURL   string
 	JWTSecret  string
 }
 
 // NewGatewayService
-func NewGatewayService(authURL, profileURL, feedURL, jwtSecret string) *GatewayService {
+func NewGatewayService(authURL, profileURL, feedURL, frontURL, jwtSecret string) *GatewayService {
 	return &GatewayService{
 		AuthURL:    authURL,
 		ProfileURL: profileURL,
 		FeedURL:    feedURL,
+		FrontURL:   frontURL,
 		JWTSecret:  jwtSecret,
 	}
 }

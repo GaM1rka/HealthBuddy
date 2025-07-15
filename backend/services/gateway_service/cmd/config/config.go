@@ -9,6 +9,7 @@ type GatewayConfig struct {
 	AuthServiceURL    string
 	ProfileServiceURL string
 	FeedServiceURL    string
+	FrontURL          string
 	JWTSecret         string
 }
 
@@ -25,6 +26,7 @@ func LoadConfig() *GatewayConfig {
 		AuthServiceURL:    mustEnv("AUTH_SERVICE_URL"),
 		ProfileServiceURL: mustEnv("PROFILE_SERVICE_URL"),
 		FeedServiceURL:    mustEnv("FEED_SERVICE_URL"),
+		FrontURL:          mustEnv("FRONT_URL"),
 		JWTSecret:         mustEnv("JWT_SECRET"),
 	}
 }

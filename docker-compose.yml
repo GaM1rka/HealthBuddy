@@ -107,13 +107,17 @@ services:
       PROFILE_SERVICE_URL: ${PROFILE_SERVICE_URL}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
       FEED_SERVICE_URL: ${FEED_SERVICE_URL}
+      FRONT_URL: ${FRONT_URL}
       JWT_SECRET: ${JWT_SECRET}
     ports:
       - "8080:8080"
     depends_on:
-      - auth
-      - feed
-      - profile
+      auth:
+        condition: service_started
+      feed:
+        condition: service_started
+      profile:
+        condition: service_started
 
 volumes:
   pg_profile_data:
