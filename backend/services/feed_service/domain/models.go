@@ -27,6 +27,7 @@ type Publication struct {
 	gorm.Model
 	PostID  string `gorm:"type:char(36);uniqueIndex" json:"post_id" validate:"required,uuid4"`
 	UserID  string `gorm:"type:char(36)" json:"user_id" validate:"required,uuid4"`
+	Name    string `gorm:"size:30" json:"name"`
 	Title   string `gorm:"size:100" json:"title"`
 	Content string `gorm:"size:10000" json:"content"`
 }
@@ -37,6 +38,7 @@ type Comment struct {
 	CommentID string `gorm:"type:char(36);uniqueIndex" json:"comment_id" validate:"required,uuid4"`
 	PostID    string `gorm:"type:char(36)" json:"post_id" validate:"required,uuid4"`
 	UserID    string `gorm:"type:char(36)" json:"user_id" validate:"required,uuid4"`
+	Name      string `gorm:"size:30" json:"name"`
 	Content   string `gorm:"size:10000" json:"content" validate:"required,max=10000"`
 }
 
@@ -59,6 +61,7 @@ func (r *PublicationRequest) Validate() error {
 type PublicationResponse struct {
 	PostID    string    `json:"post_id"`
 	UserID    string    `json:"user_id"`
+	Name      string    `json:"name"`
 	Title     string    `json:"title"`
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
@@ -98,6 +101,7 @@ func (r *PutCommentRequest) Validate() error {
 type CommentResponse struct {
 	CommentID string    `json:"coment_id"`
 	UserID    string    `json:"user_id"`
+	Name      string    `json:"name"`
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -107,6 +111,7 @@ func (p *Publication) ToResponse() PublicationResponse {
 	return PublicationResponse{
 		PostID:    p.PostID,
 		UserID:    p.UserID,
+		Name:      p.Name,
 		Title:     p.Title,
 		Content:   p.Content,
 		CreatedAt: p.CreatedAt,
@@ -117,6 +122,7 @@ func (p *Comment) ToResponse() CommentResponse {
 	return CommentResponse{
 		CommentID: p.CommentID,
 		UserID:    p.UserID,
+		Name:      p.Name,
 		Content:   p.Content,
 		CreatedAt: p.CreatedAt,
 	}

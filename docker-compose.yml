@@ -59,6 +59,7 @@ services:
       DB_USER: ${DB_FEED_USER}
       DB_PASSWORD: ${DB_FEED_PASSWORD}
       DB_NAME: ${DB_FEED_NAME}
+      PROFILE_SERVICE_URL: ${PROFILE_SERVICE_URL}
     expose:
       - "8082"
     depends_on:

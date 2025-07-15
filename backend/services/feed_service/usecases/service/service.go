@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 	"sort"
 
 	"feed_service/domain"
@@ -16,11 +19,17 @@ import (
 
 type feedService struct {
 	repository repository.FeedRepository
+	profileURL string
+	httpClient *http.Client
 }
 
 // NewFeedService creates a new FeedService
-func NewFeedService(repo repository.FeedRepository) usecases.FeedService {
-	return &feedService{repository: repo}
+func NewFeedService(repo repository.FeedRepository, profileUrl string) usecases.FeedService {
+	return &feedService{
+		repository: repo,
+		profileURL: profileUrl,
+		httpClient: http.DefaultClient,
+	}
 }
 
 // Health performs a health check
@@ -30,9 +39,36 @@ func (s *feedService) Health(ctx context.Context) error {
 
 // CreatePublication creates a new post
 func (s *feedService) CreatePublication(ctx context.Context, userID string, req domain.PublicationRequest) (domain.PublicationResponse, error) {
+	profileURL := fmt.Sprintf("%s/profile", s.profileURL)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, profileURL, nil)
+	if err != nil {
+		return domain.PublicationResponse{}, fmt.Errorf("build profile request: %w", err)
+	}
+	httpReq.Header.Set("X-User-ID", userID)
+
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		return domain.PublicationResponse{}, fmt.Errorf("call profile service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return domain.PublicationResponse{}, fmt.Errorf(
+			"profile service returned %d", resp.StatusCode,
+		)
+	}
+
+	var pr struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&pr); err != nil {
+		return domain.PublicationResponse{}, fmt.Errorf("decode profile response: %w", err)
+	}
+
 	pub := &domain.Publication{
 		PostID:  domain.NewUUID(),
 		UserID:  userID,
+		Name:    pr.Name,
 		Title:   req.Title,
 		Content: req.Content,
 	}

@@ -17,6 +17,16 @@ type DBConfig struct {
 	ConnMaxLifetime time.Duration
 }
 
+type ServiceConfig struct {
+	ProfileURl string
+}
+
+func LoadServiceConfige() ServiceConfig {
+	return ServiceConfig{
+		ProfileURl: os.Getenv("PROFILE_SERVICE_URL"),
+	}
+}
+
 func LoadDBConfig() DBConfig {
 	return DBConfig{
 		Host:            os.Getenv("DB_HOST"),
