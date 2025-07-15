@@ -112,9 +112,12 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - auth
-      - feed
-      - profile
+      auth:
+        condition: service_started
+      feed:
+        condition: service_started
+      profile:
+        condition: service_started
 
 volumes:
   pg_profile_data:
