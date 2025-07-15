@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:health_buddy_app/models/post.dart';
 import 'package:health_buddy_app/screens/profile_screen.dart';
+import 'package:health_buddy_app/services/api_service.dart'; // Import ApiService
 import 'package:intl/intl.dart';
 
 class FeedScreen extends StatefulWidget {
@@ -12,30 +13,24 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
-  // Mock data for now
-  final List<Post> _posts = [
-    Post(
-      postId: '1',
-      userId: 'user1',
-      authorName: 'John Doe',
-      content: 'Just finished a 5k run! Feeling great. #health #running',
-      createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-    ),
-    Post(
-      postId: '2',
-      userId: 'user2',
-      authorName: 'Jane Smith',
-      content: 'My new favorite healthy recipe: Quinoa salad with avocado and chickpeas. So delicious and nutritious!',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    Post(
-      postId: '3',
-      userId: 'user1',
-      authorName: 'John Doe',
-      content: 'Starting a new yoga challenge tomorrow. Wish me luck!',
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-  ];
+  // Instance of ApiService to make API calls
+  final ApiService _apiService = ApiService();
+  // Future to hold the list of posts fetched from the API
+  late Future<List<Post>> _postsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch posts when the widget is first created
+    _loadPosts();
+  }
+
+  // Method to fetch posts and assign the future
+  void _loadPosts() {
+    setState(() {
+      _postsFuture = _apiService.getPosts();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,12 +56,12 @@ class _FeedScreenState extends State<FeedScreen> {
             child: Row(
               children: [
                 Text(
-                  'My Profile', // Replace with actual user name
+                  'My Profile', // TODO: Replace with actual user name
                   style: GoogleFonts.roboto(color: fern, fontSize: 16),
                 ),
                 const SizedBox(width: 8),
                 const CircleAvatar(
-                  // Replace with actual user avatar
+                  // TODO: Replace with actual user avatar
                   backgroundImage: NetworkImage('https://picsum.photos/seed/my-profile/200'),
                   radius: 20,
                 ),
@@ -76,12 +71,33 @@ class _FeedScreenState extends State<FeedScreen> {
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: _posts.length,
-        itemBuilder: (context, index) {
-          final post = _posts[index];
-          return _buildPostCard(post, fern);
+      body: FutureBuilder<List<Post>>(
+        future: _postsFuture,
+        builder: (context, snapshot) {
+          // 1. Check for connection state (loading)
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          // 2. Check for errors
+          else if (snapshot.hasError) {
+            return Center(child: Text('Failed to load posts: ${snapshot.error}'));
+          }
+          // 3. Check if data is available and not empty
+          else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+            final posts = snapshot.data!;
+            return ListView.builder(
+              padding: const EdgeInsets.all(16.0),
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                final post = posts[index];
+                return _buildPostCard(post, fern);
+              },
+            );
+          }
+          // 4. Handle case where there are no posts
+          else {
+            return const Center(child: Text('No posts to show.'));
+          }
         },
       ),
     );
@@ -115,6 +131,7 @@ class _FeedScreenState extends State<FeedScreen> {
                       style: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     Text(
+                      // Ensure createdAt is not null before formatting
                       DateFormat.yMMMd().add_jm().format(post.createdAt),
                       style: GoogleFonts.roboto(color: Colors.grey[600], fontSize: 12),
                     ),

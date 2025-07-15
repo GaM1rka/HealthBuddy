@@ -14,8 +14,11 @@ class ApiService {
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('jwt_token');
+    final token = prefs.getString('jwt_token');
+    print('Retrieved token from storage: $token');
+    return token;
   }
+
 
   Future<void> deleteToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -42,27 +45,31 @@ class ApiService {
       body: jsonEncode({'email': email, 'password': password}),
     );
 
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
+    print('Login response status: ${response.statusCode}');
+    print('Login response body: ${response.body}');
 
     if (response.statusCode == 200) {
       try {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        
-        // Извлекаем токен из тела ответа
         final token = responseData['token'] as String?;
-        
-        if (token != null && token.isNotEmpty) {
-          await _saveToken(token);
-          return token;
+
+        final cleanedToken = token
+            ?.replaceAll(RegExp(r'^Bearer\s*<'), '')
+            .replaceAll(RegExp(r'>$'), '')
+            .trim();
+
+        print('Cleaned login token: $cleanedToken');
+
+        if (cleanedToken != null && cleanedToken.isNotEmpty) {
+          await _saveToken(cleanedToken);
+          return cleanedToken;
         } else {
-          throw Exception('Token not found in response body');
+          throw Exception('Token not found in login response');
         }
       } catch (e) {
-        throw Exception('Failed to parse response: $e');
+        throw Exception('Failed to parse login response: $e');
       }
     } else {
-      // Пытаемся извлечь сообщение об ошибке из тела ответа
       try {
         final errorData = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(errorData['message'] ?? 'Login failed with status ${response.statusCode}');
@@ -73,10 +80,11 @@ class ApiService {
   }
 
 
+
   Future<String> register(String username, String email, String password) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/api/register'),
-      headers: {'Content-Type': 'application/json'}, // Не используем _getHeaders() для регистрации
+      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'username': username,
         'email': email,
@@ -90,15 +98,20 @@ class ApiService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       try {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        
-        // Извлекаем токен из тела ответа (аналогично логину)
         final token = responseData['token'] as String?;
-        
-        if (token != null && token.isNotEmpty) {
-          await _saveToken(token);
-          return token;
+
+        final cleanedToken = token
+            ?.replaceAll(RegExp(r'^Bearer\s*<'), '')
+            .replaceAll(RegExp(r'>$'), '')
+            .trim();
+
+        print('Cleaned registration token: $cleanedToken');
+
+        if (cleanedToken != null && cleanedToken.isNotEmpty) {
+          await _saveToken(cleanedToken);
+          return cleanedToken;
         } else {
-          throw Exception('Token not found in response body');
+          throw Exception('Token not found in registration response');
         }
       } catch (e) {
         throw Exception('Failed to parse registration response: $e');
@@ -113,17 +126,31 @@ class ApiService {
     }
   }
 
+
+
   Future<List<Post>> getPosts() async {
     final response = await http.get(
-      Uri.parse('$_baseUrl/posts'),
+      Uri.parse('$_baseUrl/api/posts'),
       headers: await _getHeaders(),
     );
+    
+    // Logging to help with debugging
+    print('Get Posts Response Status: ${response.statusCode}');
+    print('Get Posts Response Body: ${response.body}');
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Post.fromJson(json)).toList();
+      try {
+        final List<dynamic> data = jsonDecode(response.body);
+        // The fromJson factory in your Post model will handle parsing each item
+        return data.map((json) => Post.fromJson(json)).toList();
+      } catch (e) {
+        // Catch errors if the response body is not valid JSON
+        print('Error parsing posts JSON: $e');
+        throw Exception('Failed to parse posts from server.');
+      }
     } else {
-      throw Exception('Failed to load posts');
+      // Throw a more informative error
+      throw Exception('Failed to load posts. Status code: ${response.statusCode}');
     }
   }
 
