@@ -9,6 +9,8 @@ import (
 
 // RegisterRoutes
 func RegisterRoutes(r *gin.Engine, svc *service.GatewayService) {
+	// CORS middleware
+	r.Use(middleware.CORSMiddleware(svc.FrontURL))
 	// 1) public auth
 	auth := r.Group("/auth")
 	{
