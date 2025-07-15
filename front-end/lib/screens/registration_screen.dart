@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:health_buddy_app/screens/feed_screen.dart';
 import 'package:health_buddy_app/screens/login_screen.dart';
+import 'package:health_buddy_app/services/api_service.dart';
+
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -16,6 +18,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final ApiService _apiService = ApiService(); // Создаем экземпляр ApiService
+
 
   @override
   void dispose() {
@@ -26,14 +30,48 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     super.dispose();
   }
 
-  void _register() {
+  void _register() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Call API to register
-      // On success, navigate to FeedScreen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const FeedScreen()),
-      );
+      try {
+        // Показываем индикатор загрузки
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(child: CircularProgressIndicator()),
+        );
+
+        // Вызываем API регистрации
+        final apiService = ApiService();
+        await apiService.register(
+          _usernameController.text.trim(),
+          _emailController.text.trim(),
+          _passwordController.text.trim(),
+        );
+
+        // Закрываем индикатор загрузки
+        if (mounted) Navigator.pop(context);
+
+        // Переходим на главный экран
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const FeedScreen()),
+          );
+        }
+      } catch (e) {
+        // Закрываем индикатор загрузки при ошибке
+        if (mounted) Navigator.pop(context);
+        
+        // Показываем ошибку пользователю
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Registration failed: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
