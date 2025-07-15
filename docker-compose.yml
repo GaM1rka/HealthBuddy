@@ -1,0 +1,126 @@
+services:
+  profile_db:  
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${DB_PROFILE_USER}
+      POSTGRES_PASSWORD: ${DB_PROFILE_PASSWORD}
+      POSTGRES_DB: ${DB_PROFILE_NAME}
+    expose:
+      - "5432"
+    volumes:
+      - pg_profile_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_PROFILE_USER} -d ${DB_PROFILE_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  profile:
+    build:
+      context: ./backend/services/profile_service 
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: profile_db  
+      DB_PORT: 5432
+      DB_USER: ${DB_PROFILE_USER}
+      DB_PASSWORD: ${DB_PROFILE_PASSWORD}
+      DB_NAME: ${DB_PROFILE_NAME}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      FEED_SERVICE_URL: ${FEED_SERVICE_URL}
+    expose:
+      - "8081"
+    depends_on:
+      profile_db:
+        condition: service_healthy
+
+  feed_db:  
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${DB_FEED_USER}
+      POSTGRES_PASSWORD: ${DB_FEED_PASSWORD}
+      POSTGRES_DB: ${DB_FEED_NAME}
+    expose:
+      - "5432"
+    volumes:
+      - pg_feed_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_FEED_USER} -d ${DB_FEED_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  feed:
+    build:
+      context: ./backend/services/feed_service 
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: feed_db  
+      DB_PORT: 5432
+      DB_USER: ${DB_FEED_USER}
+      DB_PASSWORD: ${DB_FEED_PASSWORD}
+      DB_NAME: ${DB_FEED_NAME}
+    expose:
+      - "8082"
+    depends_on:
+      feed_db:
+        condition: service_healthy
+
+  auth_db:  
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${DB_AUTH_USER}
+      POSTGRES_PASSWORD: ${DB_AUTH_PASSWORD}
+      POSTGRES_DB: ${DB_AUTH_NAME}
+    expose:
+      - "5432"
+    volumes:
+      - pg_auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_AUTH_USER} -d ${DB_AUTH_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth:
+    build:
+      context: ./backend/services/auth_service 
+      dockerfile: Dockerfile
+    environment:
+      PROFILE_SERVICE_URL: ${PROFILE_SERVICE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: auth_db  
+      DB_PORT: 5432
+      DB_USER: ${DB_AUTH_USER}
+      DB_PASSWORD: ${DB_AUTH_PASSWORD}
+      DB_NAME: ${DB_AUTH_NAME}
+    expose:
+      - "8083"
+    depends_on:
+      auth_db:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: ./backend/services/gateway_service 
+      dockerfile: Dockerfile
+    environment:
+      PROFILE_SERVICE_URL: ${PROFILE_SERVICE_URL}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      FEED_SERVICE_URL: ${FEED_SERVICE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth
+      - feed
+      - profile
+
+volumes:
+  pg_profile_data:
+  pg_feed_data:
+  pg_auth_data:
+
+networks:
+  default:
+    name: internal
+    driver: bridge
