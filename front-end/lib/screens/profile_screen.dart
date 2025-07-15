@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:health_buddy_app/models/post.dart';
 import 'package:health_buddy_app/models/user.dart';
 import 'package:health_buddy_app/screens/post_creation_screen.dart';
+import 'package:health_buddy_app/services/api_service.dart';
 import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -13,31 +14,14 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Mock Data
-  final UserProfile _user = UserProfile(
-    id: 'user1',
-    username: 'johndoe',
-    fullName: 'John Doe',
-    bio: 'Fitness enthusiast, healthy eater, and a big fan of morning runs.',
-    avatarUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
-  );
+  late Future<UserProfile> _userProfileFuture;
+  final ApiService _apiService = ApiService();
 
-  final List<Post> _posts = [
-    Post(
-      postId: '1',
-      userId: 'user1',
-      authorName: 'John Doe',
-      content: 'Just finished a 5k run! Feeling great. #health #running',
-      createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-    ),
-    Post(
-      postId: '3',
-      userId: 'user1',
-      authorName: 'John Doe',
-      content: 'Starting a new yoga challenge tomorrow. Wish me luck!',
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-  ];
+  @override
+  Future<void> initState() async {
+    super.initState();
+    _userProfileFuture = (await _apiService.getProfile()) as Future<UserProfile>;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,13 +38,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         iconTheme: const IconThemeData(color: fern),
       ),
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            SliverToBoxAdapter(child: _buildProfileHeader(_user, fern)),
-          ];
+      body: FutureBuilder<UserProfile>(
+        future: _userProfileFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (snapshot.hasData) {
+            final userProfile = snapshot.data!;
+            return NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  SliverToBoxAdapter(child: _buildProfileHeader(userProfile, fern)),
+                ];
+              },
+              body: _buildPostsList(userProfile.posts, fern),
+            );
+          } else {
+            return const Center(child: Text('No profile data found.'));
+          }
         },
-        body: _buildPostsList(_posts, fern),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -82,16 +80,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           CircleAvatar(
             radius: 50,
-            backgroundImage: NetworkImage('https://picsum.photos/seed/${user.id}/200'),
+            backgroundImage: NetworkImage('https://picsum.photos/seed/${user.userId}/200'),
           ),
           const SizedBox(height: 16),
           Text(
-            user.fullName,
+            user.name,
             style: GoogleFonts.roboto(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(
-            '@${user.username}',
+            '@${user.userId}',
             style: GoogleFonts.roboto(fontSize: 16, color: Colors.grey[600]),
           ),
           const SizedBox(height: 12),

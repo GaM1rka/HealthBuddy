@@ -28,7 +28,7 @@ class _FeedScreenState extends State<FeedScreen> {
   // Method to fetch posts and assign the future
   void _loadPosts() {
     setState(() {
-      _postsFuture = _apiService.getPosts();
+      _postsFuture = _apiService.getAllPublications();
     });
   }
 
