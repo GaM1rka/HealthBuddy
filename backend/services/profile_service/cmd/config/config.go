@@ -18,14 +18,16 @@ type DBConfig struct {
 }
 
 type ServiceConfig struct {
-	Auth_service_url string
-	Feed_service_url string
+	Auth_service_url        string
+	Feed_service_url        string
+	ProfileServiceAuthToken string
 }
 
 func LoafServiceCfg() ServiceConfig {
 	return ServiceConfig{
-		Auth_service_url: os.Getenv("AUTH_SERVICE_URL"),
-		Feed_service_url: os.Getenv("FEED_SERVICE_URL"),
+		Auth_service_url:        os.Getenv("AUTH_SERVICE_URL"),
+		Feed_service_url:        os.Getenv("FEED_SERVICE_URL"),
+		ProfileServiceAuthToken: os.Getenv("PROFILE_SERVICE_AUTH_TOKEN"),
 	}
 }
 

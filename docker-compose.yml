@@ -28,6 +28,7 @@ services:
       DB_NAME: ${DB_PROFILE_NAME}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
       FEED_SERVICE_URL: ${FEED_SERVICE_URL}
+      PROFILE_SERVICE_AUTH_TOKEN: ${PROFILE_SERVICE_AUTH_TOKEN}
     expose:
       - "8081"
     depends_on:
@@ -91,6 +92,7 @@ services:
       dockerfile: Dockerfile
     environment:
       PROFILE_SERVICE_URL: ${PROFILE_SERVICE_URL}
+      PROFILE_SERVICE_AUTH_TOKEN: ${PROFILE_SERVICE_AUTH_TOKEN}
       JWT_SECRET: ${JWT_SECRET}
       DB_HOST: auth_db  
       DB_PORT: 5432

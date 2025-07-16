@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 
 	"auth_service/domain"
@@ -30,12 +30,10 @@ func NewAuthService(r repository.UserRepo, profileSvcURL string) usecases.AuthSe
 }
 
 func (s *authService) Register(ctx context.Context, creds domain.RegistrCredentials) (string, error) {
-	// validate incoming credentials
 	if err := creds.Validate(); err != nil {
 		return "", err
 	}
 
-	// hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", fmt.Errorf("hash password: %w", err)
@@ -47,32 +45,24 @@ func (s *authService) Register(ctx context.Context, creds domain.RegistrCredenti
 		Password: string(hashed),
 		Email:    creds.Email,
 	}
-	// attempt to create user; map unique‑constraint errors to ErrEmailTaken
+
 	if err := s.repo.Create(ctx, user); err != nil {
-		var pqErr *pq.Error
-		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+		if strings.Contains(err.Error(), "SQLSTATE 23505") {
 			return "", usecases.ErrEmailTaken
 		}
-		return "", fmt.Errorf("repo create: %w", err)
+		return "", err
 	}
 
 	userID := user.ID
-
-	// build profile payload
 	type profilePayload struct {
 		Name   string `json:"name"`
 		Bio    string `json:"bio"`
 		Avatar string `json:"avatar"`
 	}
-	payload := profilePayload{
-		Name:   creds.Username,
-		Bio:    "",
-		Avatar: "",
-	}
+	payload := profilePayload{Name: creds.Username}
 	body, _ := json.Marshal(payload)
 
-	// call profile service
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/profile", s.profileSvcURL), bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.profileSvcURL+"/profile", bytes.NewReader(body))
 	if err != nil {
 		_ = s.repo.Delete(ctx, userID)
 		return "", fmt.Errorf("new profile request: %w", err)
@@ -86,34 +76,27 @@ func (s *authService) Register(ctx context.Context, creds domain.RegistrCredenti
 		return "", usecases.ErrProfileServiceDown
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusCreated {
 		_ = s.repo.Delete(ctx, userID)
 		return "", usecases.ErrProfileServiceDown
 	}
 
-	// generate JWT
+	// 5) генерируем JWT
 	token, err := jwt.GenerateToken(userID)
 	if err != nil {
 		return "", fmt.Errorf("generate token: %w", err)
 	}
-
 	return token, nil
 }
 
 func (s *authService) Login(ctx context.Context, creds domain.LoginCredentials) (string, error) {
-	// find user by username
 	user, err := s.repo.FindByUserName(ctx, creds.Username)
 	if err != nil {
-		// hide "not found" vs wrong password: always return invalid credentials
 		return "", usecases.ErrInvalidCredentials
 	}
-
-	// compare passwords
 	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(creds.Password)) != nil {
 		return "", usecases.ErrInvalidCredentials
 	}
-
 	return jwt.GenerateToken(user.ID)
 }
 
@@ -122,10 +105,25 @@ func (s *authService) Health(ctx context.Context) error {
 }
 
 func (s *authService) DeleteUser(ctx context.Context, userID string) error {
-	return s.repo.Delete(ctx, userID)
+	// delete user; if not exist map to ErrUserNotFound
+	if err := s.repo.Delete(ctx, userID); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return usecases.ErrUserNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 // FindByID
 func (s *authService) FindByID(ctx context.Context, userID string) (*domain.User, error) {
-	return s.repo.FindByUserID(ctx, userID)
+	// find user; if not exist map to ErrUserNotFound
+	user, err := s.repo.FindByUserID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, usecases.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return user, nil
 }

@@ -14,19 +14,21 @@ import (
 
 // profileService
 type profileService struct {
-	repo       repository.ProfileRepository
-	authUrl    string
-	feedUrl    string
-	httpClient *http.Client
+	repo                    repository.ProfileRepository
+	authUrl                 string
+	feedUrl                 string
+	profileServiceAuthToken string
+	httpClient              *http.Client
 }
 
 // NewProfileService
-func NewProfileService(repo repository.ProfileRepository, authUrl string, feedUrl string) usecases.ProfileService {
+func NewProfileService(repo repository.ProfileRepository, authUrl string, feedUrl string, profileServiceAuthToken string) usecases.ProfileService {
 	return &profileService{
-		repo:       repo,
-		authUrl:    authUrl,
-		feedUrl:    feedUrl,
-		httpClient: http.DefaultClient,
+		repo:                    repo,
+		authUrl:                 authUrl,
+		feedUrl:                 feedUrl,
+		profileServiceAuthToken: profileServiceAuthToken,
+		httpClient:              http.DefaultClient,
 	}
 }
 
@@ -139,6 +141,7 @@ func (s *profileService) DeleteProfile(ctx context.Context, userID string) error
 		log.Printf("failed to build auth delete request: %v", err)
 		return nil
 	}
+	req.Header.Set("X-Service-Token", s.profileServiceAuthToken)
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		log.Printf("failed to call auth service delete: %v", err)

@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"auth_service/api/http/apierrors"
@@ -48,6 +47,7 @@ func (h *AuthHandler) Health(c *gin.Context) error {
 	return nil
 }
 
+// пример Register
 func (h *AuthHandler) Register(c *gin.Context) error {
 	var creds domain.RegistrCredentials
 	if err := c.ShouldBindJSON(&creds); err != nil {
@@ -59,22 +59,13 @@ func (h *AuthHandler) Register(c *gin.Context) error {
 
 	token, err := h.svc.Register(c.Request.Context(), creds)
 	if err != nil {
-		switch {
-		case errors.Is(err, usecases.ErrEmailTaken):
-			return apierrors.NewBadRequest("email already in use", nil)
-		case errors.Is(err, usecases.ErrProfileServiceDown):
-			// profile service failure → 502
-			return apierrors.NewInternal(err)
-		default:
-			return apierrors.NewInternal(err)
-		}
+		return err //
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"token": token})
 	return nil
 }
 
-// Login JWT
 func (h *AuthHandler) Login(c *gin.Context) error {
 	var creds domain.LoginCredentials
 	if err := c.ShouldBindJSON(&creds); err != nil {
@@ -86,41 +77,30 @@ func (h *AuthHandler) Login(c *gin.Context) error {
 
 	token, err := h.svc.Login(c.Request.Context(), creds)
 	if err != nil {
-		if errors.Is(err, usecases.ErrInvalidCredentials) {
-			return apierrors.NewForbidden("invalid credentials")
-		}
-		return apierrors.NewInternal(err)
+		return err
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
 	return nil
 }
 
-// GetUserByID by ID
+// GetUserByID:
 func (h *AuthHandler) GetUserByID(c *gin.Context) error {
 	id := c.Param("id")
 	user, err := h.svc.FindByID(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, usecases.ErrUserNotFound) {
-			return apierrors.NewNotFound("user not found")
-		}
-		return apierrors.NewInternal(err)
+		return err // <- ErrUserNotFound
 	}
-
 	c.JSON(http.StatusOK, user)
 	return nil
 }
 
-// DeleteUser by ID
+// DeleteUser:
 func (h *AuthHandler) DeleteUser(c *gin.Context) error {
 	id := c.Param("id")
 	if err := h.svc.DeleteUser(c.Request.Context(), id); err != nil {
-		if errors.Is(err, usecases.ErrUserNotFound) {
-			return apierrors.NewNotFound("user not found")
-		}
-		return apierrors.NewInternal(err)
+		return err // <- ErrUserNotFound
 	}
-
 	c.Status(http.StatusNoContent)
 	return nil
 }
