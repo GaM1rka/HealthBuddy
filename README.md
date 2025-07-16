@@ -34,120 +34,159 @@ cd flutter_app && flutter run -d chrome   # or iOS / Android
 | Profile     | docs/img/profile.gif       |
 
 ## 3. API Documentation
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                         HealthBuddy  API  Reference                         ║
-╚══════════════════════════════════════════════════════════════════════════════╝
 
-Base URLs
-  Gateway:  https://api.healthbuddy.app
-  Local:    http://localhost:8080
+# HealthBuddy API Reference
 
-Global Headers
-  Content-Type:  application/json
-  Authorization: Bearer <jwt>
+## Base URLs
+- **Gateway:**  https://api.healthbuddy.app
+- **Local:**    http://localhost:8080
 
-──────────────────────────────────────────────────────────────────────────────
-AUTH  SERVICE  (/auth)
-──────────────────────────────────────────────────────────────────────────────
-POST  /auth/register
-  Body  { username, email, password }
-  201   { token }
-  400   Invalid input
-  500   Server error
+## Global Headers
+- **Content-Type:**  application/json
+- **Authorization:** Bearer `<jwt>`
 
-POST  /auth/login
-  Body  { username, password }
-  200   { token }
-  401   Wrong credentials
+---
 
-GET   /auth/users/{id}
-  Headers  Authorization
-  200   { id, username, email, created_at }
-  404   Not found
+## AUTH SERVICE (/auth)
 
-DELETE /auth/users/{id}
-  204   No content
-  404   Not found
+### POST /auth/register
+- **Body:** `{ username, email, password }`
+- **Responses:**
+  - `201`: `{ token }`
+  - `400`: Invalid input
+  - `500`: Server error
 
-──────────────────────────────────────────────────────────────────────────────
-FEED  SERVICE  (/feed)   •  JWT required via X-User-ID
-──────────────────────────────────────────────────────────────────────────────
-GET   /feed/health
-  200   { status: "ok" }     503   { status: "down" }
+### POST /auth/login
+- **Body:** `{ username, password }`
+- **Responses:**
+  - `200`: `{ token }`
+  - `401`: Wrong credentials
 
-POST  /feed/publications
-  Body  { title (≤300), content (≤10 000) }
-  201   { post_id, user_id, title, content, created_at }
+### GET /auth/users/{id}
+- **Headers:** Authorization
+- **Responses:**
+  - `200`: `{ id, username, email, created_at }`
+  - `404`: Not found
 
-GET   /feed/publications
-  200   [ PublicationResponse… ]   newest first
+### DELETE /auth/users/{id}
+- **Responses:**
+  - `204`: No content
+  - `404`: Not found
 
-GET   /feed/publications/{id}
-  200   PublicationResponse   404   Not found
+---
 
-PUT   /feed/publications/{id}
-  Body  { title, content }
-  200   Updated object   403   Forbidden   404   Not found
+## FEED SERVICE (/feed) • JWT required via X-User-ID
 
-DELETE /feed/publications/{id}
-  204   No content   403   Forbidden   404   Not found
+### GET /feed/health
+- **Responses:**
+  - `200`: `{ status: "ok" }`
+  - `503`: `{ status: "down" }`
 
-GET   /feed/users/{userID}/publications
-  200   [ PublicationResponse… ]
+### POST /feed/publications
+- **Body:** `{ title (≤300), content (≤10 000) }`
+- **Responses:**
+  - `201`: `{ post_id, user_id, title, content, created_at }`
 
-Comments
-POST  /feed/comments
-  Body  { post_id, content (≤10 000) }
-  201   { comment_id, user_id, content, created_at }
+### GET /feed/publications
+- **Responses:**
+  - `200`: `[ PublicationResponse… ]` (newest first)
 
-GET   /feed/comments?post_id={postID}
-  200   [ CommentResponse… ]   400   Missing param
+### GET /feed/publications/{id}
+- **Responses:**
+  - `200`: `PublicationResponse`
+  - `404`: Not found
 
-GET   /feed/comments/{id}
-  200   CommentResponse   404   Not found
+### PUT /feed/publications/{id}
+- **Body:** `{ title, content }`
+- **Responses:**
+  - `200`: Updated object
+  - `403`: Forbidden
+  - `404`: Not found
 
-PUT   /feed/comments/{id}
-  Body  { content }
-  200   Updated object   403   Forbidden   404   Not found
+### DELETE /feed/publications/{id}
+- **Responses:**
+  - `204`: No content
+  - `403`: Forbidden
+  - `404`: Not found
 
-DELETE /feed/comments/{id}
-  204   No content   403   Forbidden   404   Not found
+### GET /feed/users/{userID}/publications
+- **Responses:**
+  - `200`: `[ PublicationResponse… ]`
 
-──────────────────────────────────────────────────────────────────────────────
-PROFILE  SERVICE  (/profile)   •  JWT required
-──────────────────────────────────────────────────────────────────────────────
-GET   /profile/health
-  200   { status: "ok" }
+### Comments
 
-POST  /profile
-  Headers  X-User-ID, Content-Type
-  Body  { name, bio?, avatar_url? }
-  201   ProfileResponse (without posts)
+#### POST /feed/comments
+- **Body:** `{ post_id, content (≤10 000) }`
+- **Responses:**
+  - `201`: `{ comment_id, user_id, content, created_at }`
 
-GET   /profile
-  200   { user_id, name, bio, avatar, created_at, posts: [PublicationResponse…] }
+#### GET /feed/comments?post_id={postID}
+- **Responses:**
+  - `200`: `[ CommentResponse… ]`
+  - `400`: Missing param
 
-PUT   /profile
-  Body  any subset of { name, bio, avatar_url }
-  200   Updated ProfileResponse
+#### GET /feed/comments/{id}
+- **Responses:**
+  - `200`: `CommentResponse`
+  - `404`: Not found
 
-DELETE /profile
-  204   No content   (cascades to Auth deletion)
+#### PUT /feed/comments/{id}
+- **Body:** `{ content }`
+- **Responses:**
+  - `200`: Updated object
+  - `403`: Forbidden
+  - `404`: Not found
 
-──────────────────────────────────────────────────────────────────────────────
-Status Codes & Messages
-──────────────────────────────────────────────────────────────────────────────
-200 OK            Request succeeded
-201 Created       Resource created
-204 No Content    Deletion succeeded
-400 Bad Request   Validation / JSON error
-401 Unauthorized  Invalid or missing JWT
-403 Forbidden     Not owner
-404 Not Found     Resource does not exist
-500 Internal      Server or DB failure
+#### DELETE /feed/comments/{id}
+- **Responses:**
+  - `204`: No content
+  - `403`: Forbidden
+  - `404`: Not found
 
-──────────────────────────────────────────────────────────────────────────────
-Generated from Postman collections
+---
+
+## PROFILE SERVICE (/profile) • JWT required
+
+### GET /profile/health
+- **Responses:**
+  - `200`: `{ status: "ok" }`
+
+### POST /profile
+- **Headers:** X-User-ID, Content-Type
+- **Body:** `{ name, bio?, avatar_url? }`
+- **Responses:**
+  - `201`: ProfileResponse (without posts)
+
+### GET /profile
+- **Responses:**
+  - `200`: `{ user_id, name, bio, avatar, created_at, posts: [PublicationResponse…] }`
+
+### PUT /profile
+- **Body:** any subset of `{ name, bio, avatar_url }`
+- **Responses:**
+  - `200`: Updated ProfileResponse
+
+### DELETE /profile
+- **Responses:**
+  - `204`: No content (cascades to Auth deletion)
+
+---
+
+## Status Codes & Messages
+
+- `200 OK`: Request succeeded
+- `201 Created`: Resource created
+- `204 No Content`: Deletion succeeded
+- `400 Bad Request`: Validation / JSON error
+- `401 Unauthorized`: Invalid or missing JWT
+- `403 Forbidden`: Not owner
+- `404 Not Found`: Resource does not exist
+- `500 Internal`: Server or DB failure
+
+---
+
+*Generated from Postman collections*
+
 
 ## 4. Architecture Diagrams & Explanations
 
