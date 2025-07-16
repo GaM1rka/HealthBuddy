@@ -84,7 +84,7 @@ func (r *PostCommentRequest) Validate() error {
 
 // put comment request
 type PutCommentRequest struct {
-	CommentID string `json:"coment_id" validate:"required,uuid4"`
+	CommentID string `json:"comment_id" validate:"required,uuid4"`
 	Content   string `json:"content" validate:"required,max=10000"`
 }
 
@@ -99,7 +99,7 @@ func (r *PutCommentRequest) Validate() error {
 
 // comment response
 type CommentResponse struct {
-	CommentID string    `json:"coment_id"`
+	CommentID string    `json:"comment_id"`
 	UserID    string    `json:"user_id"`
 	Name      string    `json:"name"`
 	Content   string    `json:"content"`

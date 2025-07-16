@@ -129,10 +129,36 @@ func (s *feedService) DeletePublication(ctx context.Context, postID string) erro
 
 // CreateComment adds a new comment to a post
 func (s *feedService) CreateComment(ctx context.Context, userID string, req domain.PostCommentRequest) (domain.CommentResponse, error) {
+	profileURL := fmt.Sprintf("%s/profile", s.profileURL)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, profileURL, nil)
+	if err != nil {
+		return domain.CommentResponse{}, fmt.Errorf("build profile request: %w", err)
+	}
+	httpReq.Header.Set("X-User-ID", userID)
+
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		return domain.CommentResponse{}, fmt.Errorf("call profile service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return domain.CommentResponse{}, fmt.Errorf(
+			"profile service returned %d", resp.StatusCode,
+		)
+	}
+
+	var pr struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&pr); err != nil {
+		return domain.CommentResponse{}, fmt.Errorf("decode profile response: %w", err)
+	}
 	comment := &domain.Comment{
 		CommentID: domain.NewUUID(),
 		PostID:    req.PostID,
 		UserID:    userID,
+		Name:      pr.Name,
 		Content:   req.Content,
 	}
 	if err := s.repository.CreateComment(comment); err != nil {
