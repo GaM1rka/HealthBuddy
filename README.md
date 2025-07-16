@@ -43,6 +43,8 @@ Static reference → docs/api_documentation.md
 
 ## Folder Layout
 
+## Folder Layout
+```
 health-buddy/                 # repo root
 ├── backend/
 │   ├── services/
@@ -55,3 +57,4 @@ health-buddy/                 # repo root
 │   └── .gitignore
 ├── docker-compose.yml        # Orchestrates all services
 └── README.md                 # Initial version
+```
