@@ -213,5 +213,6 @@ health-buddy/                 # repo root
 └── README.md                 # Initial version
 ```
 
-## Build & Run
+## Contributing  
 
+Pull requests welcome. Open an issue first for large changes.
