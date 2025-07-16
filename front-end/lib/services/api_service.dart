@@ -5,7 +5,7 @@ import '../models/post.dart';
 import '../models/user.dart';
 
 class ApiService {
-  final String _baseUrl = 'http://localhost:8080';
+  final String _baseUrl = 'http://5.159.102.12:8080';
 
   // --- Token Management ---
 

@@ -18,9 +18,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final ApiService _apiService = ApiService();
 
   @override
-  Future<void> initState() async {
+  void initState() {
     super.initState();
-    _userProfileFuture = (await _apiService.getProfile()) as Future<UserProfile>;
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await _apiService.getProfile();
+    setState(() {
+      _userProfileFuture = Future.value(profile as UserProfile);
+    });
   }
 
   @override
