@@ -28,17 +28,22 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
-        _isLoading = true; // Показываем индикатор загрузки
+        _isLoading = true;
       });
 
       try {
-        // Вызываем метод login из ApiService
-        await _apiService.login(
+        final token = await _apiService.login(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
 
-        // Если успешно, переходим на FeedScreen
+        // Проверяем, что токен сохранён
+        final storedToken = await _apiService.getToken();
+        if (storedToken == null || storedToken.isEmpty) {
+          throw Exception('Token not saved');
+        }
+
+        // Переход только после того, как токен точно сохранён
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -46,7 +51,6 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } catch (e) {
-        // Обработка ошибок
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -61,12 +65,13 @@ class _LoginScreenState extends State<LoginScreen> {
       } finally {
         if (mounted) {
           setState(() {
-            _isLoading = false; // Скрываем индикатор загрузки
+            _isLoading = false;
           });
         }
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

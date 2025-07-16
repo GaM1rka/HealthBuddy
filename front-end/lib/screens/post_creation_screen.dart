@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:health_buddy_app/services/api_service.dart';
 
 class PostCreationScreen extends StatefulWidget {
   const PostCreationScreen({super.key});
@@ -9,19 +10,32 @@ class PostCreationScreen extends StatefulWidget {
 }
 
 class _PostCreationScreenState extends State<PostCreationScreen> {
+  final _titleController = TextEditingController();
   final _contentController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   @override
   void dispose() {
+    _titleController.dispose();
     _contentController.dispose();
     super.dispose();
   }
 
-  void _createPost() {
-    if (_contentController.text.isNotEmpty) {
-      // TODO: Call API to create post
-      // On success, navigate back
-      Navigator.pop(context);
+  void _createPost() async {
+    if (_titleController.text.isNotEmpty &&
+        _contentController.text.isNotEmpty) {
+      try {
+        await _apiService.createPublication(
+          _titleController.text,
+          _contentController.text,
+        );
+        Navigator.pop(context);
+      } catch (e) {
+        // Handle error, e.g., show a snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create post: $e')),
+        );
+      }
     }
   }
 
@@ -49,6 +63,25 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                 fontWeight: FontWeight.bold,
                 color: fern,
               ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _titleController,
+              decoration: InputDecoration(
+                hintText: 'Enter title...',
+                hintStyle: GoogleFonts.roboto(color: Colors.grey),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: fern, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: fern, width: 2),
+                ),
+              ),
+              style: GoogleFonts.roboto(),
             ),
             const SizedBox(height: 16),
             Expanded(
