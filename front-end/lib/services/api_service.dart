@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/post.dart';
@@ -245,21 +247,30 @@ class ApiService {
   }
 
   Future<UserProfile> updateProfile({String? name, String? bio, String? avatarUrl}) async {
-    final body = <String, String>{};
-    if (name != null) body['name'] = name;
-    if (bio != null) body['bio'] = bio;
-    if (avatarUrl != null) body['avatar_url'] = avatarUrl;
+    try {
+      final body = <String, dynamic>{
+        if (name != null) 'name': name,
+        if (bio != null) 'bio': bio,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+      };
 
-    final response = await http.put(
-      Uri.parse('$_baseUrl/profile'),
-      headers: await _getHeaders(),
-      body: jsonEncode(body),
-    );
+      final response = await http.put(
+        Uri.parse('$_baseUrl/profile'),
+        headers: await _getHeaders(),
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode == 200) {
-      return UserProfile.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to update profile');
+      if (response.statusCode == 200) {
+        return UserProfile.fromJson(jsonDecode(response.body));
+      } else {
+        throw Exception('Server error: ${response.statusCode}');
+      }
+    } on SocketException {
+      throw Exception('No Internet connection');
+    } on TimeoutException {
+      throw Exception('Request timeout');
+    } catch (e) {
+      throw Exception('Failed to update profile: $e');
     }
   }
 

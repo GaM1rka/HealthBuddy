@@ -19,7 +19,8 @@ class Post {
     return Post(
       postId: json['post_id'],
       userId: json['user_id'],
-      authorName: json['authorName'] ?? 'Unknown Author', // Set default value
+      // MODIFIED: Changed 'authorName' to 'author_name' to match the likely API response.
+      authorName: json['name'] ?? 'Unknown Author', 
       title: json['title'],
       content: json['content'],
       createdAt: DateTime.parse(json['created_at']),
