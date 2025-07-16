@@ -24,16 +24,19 @@ docker compose up --build     # backend at http://localhost:8080
 # Flutter
 cd flutter_app && flutter run -d chrome   # or iOS / Android
 ```
-![Screencastfrom2025-07-1612-55-42-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/1bc24f2b-b93d-42c7-ad79-45939b20c79b)
-
 
 ## 2. Screenshots & GIFs
-| Feature     | Preview                    |
-|-------------|----------------------------|
-| Register    |     |![Screencastfrom2025-07-1612-55-42-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/8a007f07-db79-4eaa-b7cd-fba0949be4ab)
-| Create Goal | docs/img/create_goal.gif   |
-| Comments    | docs/img/comments.png      |
-| Profile     | docs/img/profile.gif       |
+
+# Registration
+![Screencastfrom2025-07-1612-55-42-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/1bc24f2b-b93d-42c7-ad79-45939b20c79b)
+
+# Open profile and edit bio
+
+![Screencastfrom2025-07-1612-55-42-ezgif com-video-to-gif-converter (1)](https://github.com/user-attachments/assets/ec858441-0e44-42f7-b27e-1adb09a9c32f)
+
+# Write new post
+
+![Screencastfrom2025-07-1612-55-42-ezgif com-video-to-gif-converter (2)](https://github.com/user-attachments/assets/eb717271-cf2a-4cee-b741-7838bb7465cd)
 
 ## 3. API Documentation
 
