@@ -3,7 +3,7 @@
 
 ---
 
-## 1. Project Overview & Setup (1 pt)
+## 1. Project Overview & Setup
 
 | Layer | Tech | Responsibility |
 |-------|------|----------------|
