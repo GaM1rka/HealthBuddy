@@ -25,16 +25,16 @@ docker compose up --build     # backend at http://localhost:8080
 cd flutter_app && flutter run -d chrome   # or iOS / Android
 ```
 
-## 2. Screenshots & GIFs
+## 2. Features presentation
 
-# Registration
+### Registration
 ![Screencastfrom2025-07-1612-55-42-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/1bc24f2b-b93d-42c7-ad79-45939b20c79b)
 
-# Open profile and edit bio
+### Open profile and edit bio
 
 ![Screencastfrom2025-07-1612-55-42-ezgif com-video-to-gif-converter (1)](https://github.com/user-attachments/assets/ec858441-0e44-42f7-b27e-1adb09a9c32f)
 
-# Write new post
+### Write new post
 
 ![Screencastfrom2025-07-1612-55-42-ezgif com-video-to-gif-converter (2)](https://github.com/user-attachments/assets/eb717271-cf2a-4cee-b741-7838bb7465cd)
 
