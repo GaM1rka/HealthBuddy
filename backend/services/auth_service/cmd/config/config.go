@@ -18,14 +18,16 @@ type DBConfig struct {
 }
 
 type ServiceConfig struct {
-	Profile_service_utl string
-	Jwt_secret          string
+	Profile_service_utl     string
+	Jwt_secret              string
+	ProfileServiceAuthToken string
 }
 
 func LoadServiceConfig() *ServiceConfig {
 	return &ServiceConfig{
-		Profile_service_utl: os.Getenv("PROFILE_SERVICE_URL"),
-		Jwt_secret:          os.Getenv("JWT_SECRET"),
+		Profile_service_utl:     os.Getenv("PROFILE_SERVICE_URL"),
+		Jwt_secret:              os.Getenv("JWT_SECRET"),
+		ProfileServiceAuthToken: os.Getenv("PROFILE_SERVICE_AUTH_TOKEN"),
 	}
 }
 

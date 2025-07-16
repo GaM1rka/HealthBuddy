@@ -3,5 +3,8 @@ package usecases
 import "errors"
 
 var (
-	ErrNotFound = errors.New("User not found")
+	ErrUserNotFound       = errors.New("user not found")
+	ErrInvalidCredentials = errors.New("invalid username or password")
+	ErrEmailTaken         = errors.New("email/username already in use")
+	ErrProfileServiceDown = errors.New("cannot create profile")
 )

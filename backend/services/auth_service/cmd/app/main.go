@@ -58,7 +58,7 @@ func main() {
 	userRepo := db.NewUserRepo(gormDB)
 	svc := authService.NewAuthService(userRepo, svcCfg.Profile_service_utl)
 	handler := httpHandler.NewAuthHandler(svc)
-	handler.RegisterRoutes(router)
+	handler.RegisterRoutes(router, svcCfg.ProfileServiceAuthToken)
 
 	// Start HTTP server
 	srv := &http.Server{

@@ -4,6 +4,7 @@ import (
 	"auth_service/api/http/apierrors"
 	"errors"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,5 +23,16 @@ func ErrorHandlerMiddleware(h HandlerFunc) gin.HandlerFunc {
 			}
 			c.Abort()
 		}
+	}
+}
+
+func ServiceAuthMiddleware(expectedToken string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.GetHeader("X-Service-Token") != expectedToken {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "service unauthorized"})
+			c.Abort()
+			return
+		}
+		c.Next()
 	}
 }
