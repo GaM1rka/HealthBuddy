@@ -4,115 +4,111 @@ import (
 	"context"
 	"net/http"
 
+	"auth_service/api/http/apierrors"
+	"auth_service/api/http/middleware"
 	"auth_service/domain"
 	"auth_service/usecases"
 
 	"github.com/gin-gonic/gin"
 )
 
-// AuthHandler handles HTTP requests for user registration, login and health check.
 type AuthHandler struct {
 	svc usecases.AuthService
 }
 
-// NewAuthHandler constructs a new AuthHandler.
 func NewAuthHandler(svc usecases.AuthService) *AuthHandler {
 	return &AuthHandler{svc: svc}
 }
 
-// RegisterRoutes registers auth routes on the Gin engine.
 func (h *AuthHandler) RegisterRoutes(r *gin.Engine) {
 	grp := r.Group("/auth")
 	{
-		grp.GET("/health", h.Health)
-		grp.POST("/register", h.Register)
-		grp.POST("/login", h.Login)
-		grp.GET("/user/:id", h.GetUserByID)
-		grp.DELETE("/user/:id", h.DeleteUser)
+		// оборачиваем каждый метод в наш middleware
+		grp.GET("/health", middleware.ErrorHandlerMiddleware(h.Health))
+		grp.POST("/register", middleware.ErrorHandlerMiddleware(h.Register))
+		grp.POST("/login", middleware.ErrorHandlerMiddleware(h.Login))
+		grp.GET("/user/:id", middleware.ErrorHandlerMiddleware(h.GetUserByID))
+		grp.DELETE("/user/:id", middleware.ErrorHandlerMiddleware(h.DeleteUser))
 	}
 }
 
-// Health handles GET /auth/health
-func (h *AuthHandler) Health(c *gin.Context) {
+// Health
+func (h *AuthHandler) Health(c *gin.Context) error {
 	if healthSvc, ok := h.svc.(interface {
 		Health(ctx context.Context) error
 	}); ok {
 		if err := healthSvc.Health(c.Request.Context()); err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "down"})
-			return
+			return apierrors.NewInternal(err)
 		}
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-		return
+		return nil
 	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	return nil
 }
 
-// Register handles POST /auth/register
-func (h *AuthHandler) Register(c *gin.Context) {
+func (h *AuthHandler) Register(c *gin.Context) error {
 	var creds domain.RegistrCredentials
 	if err := c.ShouldBindJSON(&creds); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewBadRequest("invalid JSON", err)
 	}
 	if err := creds.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewBadRequest(err.Error(), err)
 	}
 
 	token, err := h.svc.Register(c.Request.Context(), creds)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewInternal(err)
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"token": token})
+	return nil
 }
 
-// Login handles POST /auth/login
-func (h *AuthHandler) Login(c *gin.Context) {
+// Login JWT
+func (h *AuthHandler) Login(c *gin.Context) error {
 	var creds domain.LoginCredentials
 	if err := c.ShouldBindJSON(&creds); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewBadRequest("invalid JSON", err)
 	}
 	if err := creds.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewBadRequest(err.Error(), err)
 	}
 
 	token, err := h.svc.Login(c.Request.Context(), creds)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewForbidden(err.Error())
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
+	return nil
 }
 
-// DELETE /auth/user/:id
-func (h *AuthHandler) DeleteUser(c *gin.Context) {
-	id := c.Param("id")
-	if err := h.svc.DeleteUser(c.Request.Context(), id); err != nil {
-		if err == usecases.ErrNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
-		return
-	}
-	c.Status(http.StatusNoContent)
-}
-
-// GET /auth/user/:id
-func (h *AuthHandler) GetUserByID(c *gin.Context) {
+// GetUserByID by ID
+func (h *AuthHandler) GetUserByID(c *gin.Context) error {
 	id := c.Param("id")
 	user, err := h.svc.FindByID(c.Request.Context(), id)
 	if err != nil {
 		if err == usecases.ErrNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return apierrors.NewNotFound("user not found")
 		}
-		return
+		return apierrors.NewInternal(err)
 	}
+
 	c.JSON(http.StatusOK, user)
+	return nil
+}
+
+// DeleteUser by ID
+func (h *AuthHandler) DeleteUser(c *gin.Context) error {
+	id := c.Param("id")
+	if err := h.svc.DeleteUser(c.Request.Context(), id); err != nil {
+		if err == usecases.ErrNotFound {
+			return apierrors.NewNotFound("user not found")
+		}
+		return apierrors.NewInternal(err)
+	}
+
+	c.Status(http.StatusNoContent)
+	return nil
 }
