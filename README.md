@@ -28,7 +28,7 @@ cd flutter_app && flutter run -d chrome   # or iOS / Android
 ## 2. Screenshots & GIFs
 | Feature     | Preview                    |
 |-------------|----------------------------|
-| Onboarding  | docs/img/onboarding.png    |
+| Register    |     |![Screencastfrom2025-07-1612-55-42-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/8a007f07-db79-4eaa-b7cd-fba0949be4ab)
 | Create Goal | docs/img/create_goal.gif   |
 | Comments    | docs/img/comments.png      |
 | Profile     | docs/img/profile.gif       |
@@ -191,8 +191,6 @@ cd flutter_app && flutter run -d chrome   # or iOS / Android
 ## 4. Architecture Diagrams & Explanations
 
 <img width="1429" height="699" alt="image" src="https://github.com/user-attachments/assets/c47e17c3-7379-4da6-8b5a-a62f086295e3" />
-
-## Folder Layout
 
 ## Folder Layout
 ```
