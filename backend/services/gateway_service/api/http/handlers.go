@@ -1,7 +1,7 @@
 package http
 
 import (
-	"gateway_service/usecases/middleware"
+	"gateway_service/api/http/middleware"
 	"gateway_service/usecases/service"
 
 	"github.com/gin-gonic/gin"
