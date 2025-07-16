@@ -24,3 +24,10 @@ docker compose up --build     # backend at http://localhost:8080
 # Flutter
 cd flutter_app && flutter run -d chrome   # or iOS / Android
 
+## 2. Screenshots & GIFs
+| Feature     | Preview                    |
+|-------------|----------------------------|
+| Onboarding  | docs/img/onboarding.png    |
+| Create Goal | docs/img/create_goal.gif   |
+| Comments    | docs/img/comments.png      |
+| Profile     | docs/img/profile.gif       |
