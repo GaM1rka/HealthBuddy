@@ -33,9 +33,121 @@ cd flutter_app && flutter run -d chrome   # or iOS / Android
 | Comments    | docs/img/comments.png      |
 | Profile     | docs/img/profile.gif       |
 
-## 3. API Documentation (1 pt)
-Interactive Swagger UI → http://localhost:8080/docs
-Static reference → docs/api_documentation.md
+## 3. API Documentation
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         HealthBuddy  API  Reference                         ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Base URLs
+  Gateway:  https://api.healthbuddy.app
+  Local:    http://localhost:8080
+
+Global Headers
+  Content-Type:  application/json
+  Authorization: Bearer <jwt>
+
+──────────────────────────────────────────────────────────────────────────────
+AUTH  SERVICE  (/auth)
+──────────────────────────────────────────────────────────────────────────────
+POST  /auth/register
+  Body  { username, email, password }
+  201   { token }
+  400   Invalid input
+  500   Server error
+
+POST  /auth/login
+  Body  { username, password }
+  200   { token }
+  401   Wrong credentials
+
+GET   /auth/users/{id}
+  Headers  Authorization
+  200   { id, username, email, created_at }
+  404   Not found
+
+DELETE /auth/users/{id}
+  204   No content
+  404   Not found
+
+──────────────────────────────────────────────────────────────────────────────
+FEED  SERVICE  (/feed)   •  JWT required via X-User-ID
+──────────────────────────────────────────────────────────────────────────────
+GET   /feed/health
+  200   { status: "ok" }     503   { status: "down" }
+
+POST  /feed/publications
+  Body  { title (≤300), content (≤10 000) }
+  201   { post_id, user_id, title, content, created_at }
+
+GET   /feed/publications
+  200   [ PublicationResponse… ]   newest first
+
+GET   /feed/publications/{id}
+  200   PublicationResponse   404   Not found
+
+PUT   /feed/publications/{id}
+  Body  { title, content }
+  200   Updated object   403   Forbidden   404   Not found
+
+DELETE /feed/publications/{id}
+  204   No content   403   Forbidden   404   Not found
+
+GET   /feed/users/{userID}/publications
+  200   [ PublicationResponse… ]
+
+Comments
+POST  /feed/comments
+  Body  { post_id, content (≤10 000) }
+  201   { comment_id, user_id, content, created_at }
+
+GET   /feed/comments?post_id={postID}
+  200   [ CommentResponse… ]   400   Missing param
+
+GET   /feed/comments/{id}
+  200   CommentResponse   404   Not found
+
+PUT   /feed/comments/{id}
+  Body  { content }
+  200   Updated object   403   Forbidden   404   Not found
+
+DELETE /feed/comments/{id}
+  204   No content   403   Forbidden   404   Not found
+
+──────────────────────────────────────────────────────────────────────────────
+PROFILE  SERVICE  (/profile)   •  JWT required
+──────────────────────────────────────────────────────────────────────────────
+GET   /profile/health
+  200   { status: "ok" }
+
+POST  /profile
+  Headers  X-User-ID, Content-Type
+  Body  { name, bio?, avatar_url? }
+  201   ProfileResponse (without posts)
+
+GET   /profile
+  200   { user_id, name, bio, avatar, created_at, posts: [PublicationResponse…] }
+
+PUT   /profile
+  Body  any subset of { name, bio, avatar_url }
+  200   Updated ProfileResponse
+
+DELETE /profile
+  204   No content   (cascades to Auth deletion)
+
+──────────────────────────────────────────────────────────────────────────────
+Status Codes & Messages
+──────────────────────────────────────────────────────────────────────────────
+200 OK            Request succeeded
+201 Created       Resource created
+204 No Content    Deletion succeeded
+400 Bad Request   Validation / JSON error
+401 Unauthorized  Invalid or missing JWT
+403 Forbidden     Not owner
+404 Not Found     Resource does not exist
+500 Internal      Server or DB failure
+
+──────────────────────────────────────────────────────────────────────────────
+Generated from Postman collections
 
 ## 4. Architecture Diagrams & Explanations
 
@@ -48,13 +160,16 @@ Static reference → docs/api_documentation.md
 health-buddy/                 # repo root
 ├── backend/
 │   ├── services/
-│   │   ├── auth_service/     # Auth micro-service (Dockerfile present)
-│   │   ├── feed_service/     # Feed micro-service  (Dockerfile present)
-│   │   └── profile_service/  # Profile micro-service (Dockerfile present)
-│   └── gateway_service/      # Gateway (CORS & structure recently updated)
+│   │   ├── auth_service/     # Auth micro-service
+│   │   ├── feed_service/     # Feed micro-service
+│   │   └── profile_service/  # Profile micro-service
+│   └── gateway_service/      # Gateway
 ├── front-end/                # Flutter application
 │   ├── pubspec.yaml
 │   └── .gitignore
 ├── docker-compose.yml        # Orchestrates all services
 └── README.md                 # Initial version
 ```
+
+## Build & Run
+
