@@ -39,18 +39,19 @@ Static reference → docs/api_documentation.md
 
 ## 4. Architecture Diagrams & Explanations
 
-flowchart TD
-    subgraph Client
-        A[Flutter App] -->|HTTPS / WebSocket| B(Gateway)
-    end
-    subgraph Back-end
-        B --> C[Go Auth Service]
-        B --> D[Go Feed Service]
-        B --> E[Go Profile Service]
-    end
-    subgraph Infra
-        C --> F[(PostgreSQL Auth)]
-        D --> G[(PostgreSQL Feed)]
-        E --> H[(PostgreSQL Profile)]
-        B --> I[Redis Cache]
-    end
+<img width="1429" height="699" alt="image" src="https://github.com/user-attachments/assets/c47e17c3-7379-4da6-8b5a-a62f086295e3" />
+
+## Folder Layout
+
+health-buddy/                 # repo root
+├── backend/
+│   ├── services/
+│   │   ├── auth_service/     # Auth micro-service (Dockerfile present)
+│   │   ├── feed_service/     # Feed micro-service  (Dockerfile present)
+│   │   └── profile_service/  # Profile micro-service (Dockerfile present)
+│   └── gateway_service/      # Gateway (CORS & structure recently updated)
+├── front-end/                # Flutter application
+│   ├── pubspec.yaml
+│   └── .gitignore
+├── docker-compose.yml        # Orchestrates all services
+└── README.md                 # Initial version
