@@ -16,6 +16,7 @@ services:
       retries: 5
 
   profile:
+    image: m1r0tvorxc/profile-service:latest
     build:
       context: ./backend/services/profile_service 
       dockerfile: Dockerfile
@@ -50,6 +51,7 @@ services:
       retries: 5
 
   feed:
+    image: m1r0tvorxc/feed-service:latest
     build:
       context: ./backend/services/feed_service 
       dockerfile: Dockerfile
@@ -83,6 +85,7 @@ services:
       retries: 5
 
   auth:
+    image: m1r0tvorxc/auth-service:latest
     build:
       context: ./backend/services/auth_service 
       dockerfile: Dockerfile
@@ -101,6 +104,7 @@ services:
         condition: service_healthy
 
   gateway:
+    image: m1r0tvorxc/gateway-service:latest
     build:
       context: ./backend/services/gateway_service 
       dockerfile: Dockerfile
