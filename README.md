@@ -23,6 +23,7 @@ cp .env.example .env          # fill secrets
 docker compose up --build     # backend at http://localhost:8080
 # Flutter
 cd flutter_app && flutter run -d chrome   # or iOS / Android
+```
 
 ## 2. Screenshots & GIFs
 | Feature     | Preview                    |
@@ -31,3 +32,25 @@ cd flutter_app && flutter run -d chrome   # or iOS / Android
 | Create Goal | docs/img/create_goal.gif   |
 | Comments    | docs/img/comments.png      |
 | Profile     | docs/img/profile.gif       |
+
+## 3. API Documentation (1 pt)
+Interactive Swagger UI → http://localhost:8080/docs
+Static reference → docs/api_documentation.md
+
+## 4. Architecture Diagrams & Explanations
+
+flowchart TD
+    subgraph Client
+        A[Flutter App] -->|HTTPS / WebSocket| B(Gateway)
+    end
+    subgraph Back-end
+        B --> C[Go Auth Service]
+        B --> D[Go Feed Service]
+        B --> E[Go Profile Service]
+    end
+    subgraph Infra
+        C --> F[(PostgreSQL Auth)]
+        D --> G[(PostgreSQL Feed)]
+        E --> H[(PostgreSQL Profile)]
+        B --> I[Redis Cache]
+    end
