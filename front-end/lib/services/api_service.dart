@@ -1,11 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:health_buddy_app/models/post.dart';
-import 'package:health_buddy_app/models/user.dart';
+import '../models/post.dart';
+import '../models/user.dart';
 
 class ApiService {
-  final String _baseUrl = 'https://f9428f71-7371-4774-8fa6-af08d9664808.mock.pstmn.io'; // Replace with your actual backend URL
+  final String _baseUrl = 'http://5.159.102.12:8080';
+
+  // --- Token Management ---
 
   Future<void> _saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -35,48 +39,29 @@ class ApiService {
     };
   }
 
-  Future<String> login(String email, String password) async {
+  // --- Auth Service ---
+
+  Future<String> login(String username, String password) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/api/login'),
+      Uri.parse('$_baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
+      body: jsonEncode({'username': username, 'password': password}),
     );
 
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
-
     if (response.statusCode == 200) {
-      try {
-        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        
-        // Извлекаем токен из тела ответа
-        final token = responseData['token'] as String?;
-        
-        if (token != null && token.isNotEmpty) {
-          await _saveToken(token);
-          return token;
-        } else {
-          throw Exception('Token not found in response body');
-        }
-      } catch (e) {
-        throw Exception('Failed to parse response: $e');
-      }
+      final data = jsonDecode(response.body);
+      final token = data['token'];
+      await _saveToken(token);
+      return token;
     } else {
-      // Пытаемся извлечь сообщение об ошибке из тела ответа
-      try {
-        final errorData = jsonDecode(response.body) as Map<String, dynamic>;
-        throw Exception(errorData['message'] ?? 'Login failed with status ${response.statusCode}');
-      } catch (_) {
-        throw Exception('Login failed with status ${response.statusCode}');
-      }
+      throw Exception('Failed to login');
     }
   }
 
-
   Future<String> register(String username, String email, String password) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/api/register'),
-      headers: {'Content-Type': 'application/json'}, // Не используем _getHeaders() для регистрации
+      Uri.parse('$_baseUrl/auth/register'),
+      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'username': username,
         'email': email,
@@ -84,38 +69,45 @@ class ApiService {
       }),
     );
 
-    print('Registration response status: ${response.statusCode}');
-    print('Registration response body: ${response.body}');
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      try {
-        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        
-        // Извлекаем токен из тела ответа (аналогично логину)
-        final token = responseData['token'] as String?;
-        
-        if (token != null && token.isNotEmpty) {
-          await _saveToken(token);
-          return token;
-        } else {
-          throw Exception('Token not found in response body');
-        }
-      } catch (e) {
-        throw Exception('Failed to parse registration response: $e');
-      }
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      final token = data['token'];
+      await _saveToken(token);
+      return token;
     } else {
-      try {
-        final errorData = jsonDecode(response.body) as Map<String, dynamic>;
-        throw Exception(errorData['message'] ?? 'Registration failed with status ${response.statusCode}');
-      } catch (_) {
-        throw Exception('Registration failed with status ${response.statusCode}');
-      }
+      throw Exception('Failed to register');
     }
   }
 
-  Future<List<Post>> getPosts() async {
+  Future<User> getUserById(String id) async {
     final response = await http.get(
-      Uri.parse('$_baseUrl/posts'),
+      Uri.parse('$_baseUrl/auth/users/$id'),
+      headers: await _getHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      return User.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to get user');
+    }
+  }
+
+  Future<void> deleteUser(String id) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/auth/users/$id'),
+      headers: await _getHeaders(),
+    );
+
+    if (response.statusCode != 204) {
+      throw Exception('Failed to delete user');
+    }
+  }
+
+  // --- Feed Service ---
+
+  Future<List<Post>> getAllPublications() async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/feed/publications'),
       headers: await _getHeaders(),
     );
 
@@ -123,48 +115,173 @@ class ApiService {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => Post.fromJson(json)).toList();
     } else {
-      throw Exception('Failed to load posts');
+      throw Exception('Failed to load publications');
     }
   }
 
-  Future<void> createPost(String content) async {
+  Future<Post> createPublication(String title, String content) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/post/create'),
+      Uri.parse('$_baseUrl/feed/publications'),
       headers: await _getHeaders(),
-      body: jsonEncode({'content': content}),
+      body: jsonEncode({'title': title, 'content': content}),
     );
 
-    if (response.statusCode != 201) {
-      throw Exception('Failed to create post');
+    if (response.statusCode == 201) {
+      return Post.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to create publication');
     }
   }
-
-  Future<UserProfile> getUserProfile() async {
+  
+  Future<Post> getPublicationById(String id) async {
     final response = await http.get(
-      Uri.parse('$_baseUrl/profile'), // Assuming this is the endpoint
+      Uri.parse('$_baseUrl/feed/publications/$id'),
       headers: await _getHeaders(),
     );
 
     if (response.statusCode == 200) {
-      //TODO: Update this once the UserProfile model has a fromJson factory
-      final Map<String, dynamic> data = jsonDecode(response.body);
-      return UserProfile.fromJson(data);
+      return Post.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to get publication');
+    }
+  }
+
+  Future<Post> updatePublication(String id, String title, String content) async {
+    final response = await http.put(
+      Uri.parse('$_baseUrl/feed/publications/$id'),
+      headers: await _getHeaders(),
+      body: jsonEncode({'title': title, 'content': content}),
+    );
+
+    if (response.statusCode == 200) {
+      return Post.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to update publication');
+    }
+  }
+
+  Future<void> deletePublication(String id) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/feed/publications/$id'),
+      headers: await _getHeaders(),
+    );
+
+    if (response.statusCode != 204) {
+      throw Exception('Failed to delete publication');
+    }
+  }
+
+  Future<List<Post>> getUserPublications(String userId) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/feed/users/$userId/publications'),
+      headers: await _getHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => Post.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load user publications');
+    }
+  }
+
+  Future<Comment> createComment(String postId, String content) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/feed/comments'),
+      headers: await _getHeaders(),
+      body: jsonEncode({'post_id': postId, 'content': content}),
+    );
+
+    if (response.statusCode == 201) {
+      return Comment.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to create comment');
+    }
+  }
+
+  Future<List<Comment>> getCommentsForPost(String postId) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/feed/comments?post_id=$postId'),
+      headers: await _getHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => Comment.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load comments');
+    }
+  }
+
+  // --- Profile Service ---
+
+  Future<UserProfile> getProfile() async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/profile'),
+      headers: await _getHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      return UserProfile.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to load user profile');
     }
   }
-  
-    Future<List<Post>> getUserPosts() async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/user/posts'), // Assuming this is the endpoint
+
+  Future<UserProfile> createProfile(String name, {String? bio, String? avatarUrl}) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/profile'),
+      headers: await _getHeaders(),
+      body: jsonEncode({
+        'name': name,
+        'bio': bio,
+        'avatar_url': avatarUrl,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return UserProfile.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to create profile');
+    }
+  }
+
+  Future<UserProfile> updateProfile({String? name, String? bio, String? avatarUrl}) async {
+    try {
+      final body = <String, dynamic>{
+        if (name != null) 'name': name,
+        if (bio != null) 'bio': bio,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+      };
+
+      final response = await http.put(
+        Uri.parse('$_baseUrl/profile'),
+        headers: await _getHeaders(),
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return UserProfile.fromJson(jsonDecode(response.body));
+      } else {
+        throw Exception('Server error: ${response.statusCode}');
+      }
+    } on SocketException {
+      throw Exception('No Internet connection');
+    } on TimeoutException {
+      throw Exception('Request timeout');
+    } catch (e) {
+      throw Exception('Failed to update profile: $e');
+    }
+  }
+
+  Future<void> deleteProfile() async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/profile'),
       headers: await _getHeaders(),
     );
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Post.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load user posts');
+    if (response.statusCode != 204) {
+      throw Exception('Failed to delete profile');
     }
   }
 }

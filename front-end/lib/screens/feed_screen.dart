@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:health_buddy_app/models/post.dart';
 import 'package:health_buddy_app/screens/profile_screen.dart';
+import 'package:health_buddy_app/services/api_service.dart';
 import 'package:intl/intl.dart';
 
 class FeedScreen extends StatefulWidget {
@@ -12,30 +13,14 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
-  // Mock data for now
-  final List<Post> _posts = [
-    Post(
-      postId: '1',
-      userId: 'user1',
-      authorName: 'John Doe',
-      content: 'Just finished a 5k run! Feeling great. #health #running',
-      createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-    ),
-    Post(
-      postId: '2',
-      userId: 'user2',
-      authorName: 'Jane Smith',
-      content: 'My new favorite healthy recipe: Quinoa salad with avocado and chickpeas. So delicious and nutritious!',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    Post(
-      postId: '3',
-      userId: 'user1',
-      authorName: 'John Doe',
-      content: 'Starting a new yoga challenge tomorrow. Wish me luck!',
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-  ];
+  final ApiService _apiService = ApiService();
+  late Future<List<Post>> _postsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _postsFuture = _apiService.getAllPublications();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,12 +46,11 @@ class _FeedScreenState extends State<FeedScreen> {
             child: Row(
               children: [
                 Text(
-                  'My Profile', // Replace with actual user name
+                  'My Profile',
                   style: GoogleFonts.roboto(color: fern, fontSize: 16),
                 ),
                 const SizedBox(width: 8),
                 const CircleAvatar(
-                  // Replace with actual user avatar
                   backgroundImage: NetworkImage('https://picsum.photos/seed/my-profile/200'),
                   radius: 20,
                 ),
@@ -76,18 +60,34 @@ class _FeedScreenState extends State<FeedScreen> {
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: _posts.length,
-        itemBuilder: (context, index) {
-          final post = _posts[index];
-          return _buildPostCard(post, fern);
+      body: FutureBuilder<List<Post>>(
+        future: _postsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Failed to load posts: ${snapshot.error}'));
+          } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+            final posts = snapshot.data!;
+            return ListView.builder(
+              padding: const EdgeInsets.all(16.0),
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                final post = posts[index];
+                return _buildPostCard(post, fern);
+              },
+            );
+          } else {
+            return const Center(child: Text('No posts to show.'));
+          }
         },
       ),
     );
   }
 
   Widget _buildPostCard(Post post, Color borderColor) {
+    final authorName = post.authorName.trim().isNotEmpty ? post.authorName : 'Unknown Author';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16.0),
       shape: RoundedRectangleBorder(
@@ -100,29 +100,16 @@ class _FeedScreenState extends State<FeedScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage('https://picsum.photos/seed/${post.userId}/200'),
-                  radius: 20,
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      post.authorName,
-                      style: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    Text(
-                      DateFormat.yMMMd().add_jm().format(post.createdAt),
-                      style: GoogleFonts.roboto(color: Colors.grey[600], fontSize: 12),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            _buildAuthorInfo(authorName, post.createdAt, userId: post.userId),
             const SizedBox(height: 16),
+            if (post.title.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  post.title,
+                  style: GoogleFonts.roboto(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
             Text(
               post.content,
               style: GoogleFonts.roboto(fontSize: 15, height: 1.4),
@@ -132,9 +119,7 @@ class _FeedScreenState extends State<FeedScreen> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton.icon(
-                  onPressed: () {
-                    // TODO: Implement comment functionality
-                  },
+                  onPressed: () {},
                   icon: const Icon(Icons.comment_outlined, color: Colors.grey),
                   label: Text('Comment', style: GoogleFonts.roboto(color: Colors.grey)),
                 ),
@@ -143,6 +128,35 @@ class _FeedScreenState extends State<FeedScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAuthorInfo(String name, DateTime postDate, {String? userId}) {
+    final avatar = userId != null
+        ? NetworkImage('https://picsum.photos/seed/$userId/200')
+        : const AssetImage('assets/default_avatar.png') as ImageProvider;
+
+    return Row(
+      children: [
+        CircleAvatar(
+          backgroundImage: avatar,
+          radius: 20,
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              name,
+              style: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            Text(
+              DateFormat.yMMMd().add_jm().format(postDate),
+              style: GoogleFonts.roboto(color: Colors.grey[600], fontSize: 12),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
