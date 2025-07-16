@@ -2,7 +2,8 @@ package http
 
 import (
 	"net/http"
-
+	"profile_service/api/http/apierrors"
+	"profile_service/api/http/middleware"
 	"profile_service/domain"
 	"profile_service/usecases"
 
@@ -24,150 +25,125 @@ func NewProfileHandler(svc usecases.ProfileService) *ProfileHandler {
 func (h *ProfileHandler) RegisterRoutes(r *gin.Engine) {
 	grp := r.Group("/profile")
 	{
-		grp.GET("/health", h.Health)
-		grp.POST("", h.Create)
-		/* grp.GET("", h.List) */
-		grp.GET("", h.GetByID)
-		grp.PUT("", h.Update)
-		grp.DELETE("", h.Delete)
+		grp.GET("/health", middleware.ErrorHandlerMiddleware(h.Health))
+		grp.POST("", middleware.ErrorHandlerMiddleware(h.Create))
+		grp.GET("", middleware.ErrorHandlerMiddleware(h.GetByID))
+		grp.PUT("", middleware.ErrorHandlerMiddleware(h.Update))
+		grp.DELETE("", middleware.ErrorHandlerMiddleware(h.Delete))
 	}
 }
 
 // Health endpoint
-func (h *ProfileHandler) Health(c *gin.Context) {
+func (h *ProfileHandler) Health(c *gin.Context) error {
 	if err := h.svc.Health(c.Request.Context()); err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "db down"})
-	} else {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		return apierrors.NewInternal(err)
 	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	return nil
 }
 
 // Create handles POST /profile
-func (h *ProfileHandler) Create(c *gin.Context) {
+func (h *ProfileHandler) Create(c *gin.Context) error {
 	userID := c.GetHeader("X-User-ID")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing X-User-ID header"})
-		return
+		return apierrors.NewBadRequest("missing X-User-ID header", nil)
 	}
 
 	var req domain.ProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewBadRequest(err.Error(), err)
 	}
 	if err := domain.Validate(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewBadRequest(err.Error(), err)
 	}
 
 	out, err := h.svc.CreateProfile(c.Request.Context(), userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewInternal(err)
 	}
 	c.JSON(http.StatusCreated, out)
+	return nil
 }
 
 // GetByID handles GET /profile
-func (h *ProfileHandler) GetByID(c *gin.Context) {
+func (h *ProfileHandler) GetByID(c *gin.Context) error {
 	userID := c.GetHeader("X-User-ID")
 	out, err := h.svc.GetProfile(c.Request.Context(), userID)
 	if err != nil {
 		if err == usecases.ErrNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return apierrors.NewNotFound(err.Error())
 		}
-		return
+		return apierrors.NewInternal(err)
 	}
 	c.JSON(http.StatusOK, out)
+	return nil
 }
-
-// List handles GET /profile
-/* func (h *ProfileHandler) List(c *gin.Context) {
-	list, err := h.svc.ListProfiles(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, list)
-} */
 
 // Update handles PUT /profile
 // Only the owner of the profile can update it.
-func (h *ProfileHandler) Update(c *gin.Context) {
+func (h *ProfileHandler) Update(c *gin.Context) error {
 	userID := c.GetHeader("X-User-ID")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing X-User-ID header"})
-		return
+		return apierrors.NewBadRequest("missing X-User-ID header", nil)
 	}
+
 	// Fetch existing profile to verify ownership
 	existing, err := h.svc.GetProfile(c.Request.Context(), userID)
 	if err != nil {
 		if err == usecases.ErrNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return apierrors.NewNotFound(err.Error())
 		}
-		return
+		return apierrors.NewInternal(err)
 	}
 	if existing.UserID != userID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized to update this profile"})
-		return
+		return apierrors.NewForbidden("unauthorized to update this profile")
 	}
 
 	var req domain.ProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewBadRequest(err.Error(), err)
 	}
 	if err := domain.Validate(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		return apierrors.NewBadRequest(err.Error(), err)
 	}
 
 	out, err := h.svc.UpdateProfile(c.Request.Context(), userID, req)
 	if err != nil {
 		if err == usecases.ErrNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return apierrors.NewNotFound(err.Error())
 		}
-		return
+		return apierrors.NewInternal(err)
 	}
 	c.JSON(http.StatusOK, out)
+	return nil
 }
 
-// Delete handles DELETE /profile/:id
+// Delete handles DELETE /profile
 // Only the owner of the profile can delete it.
-func (h *ProfileHandler) Delete(c *gin.Context) {
+func (h *ProfileHandler) Delete(c *gin.Context) error {
 	userID := c.GetHeader("X-User-ID")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing X-User-ID header"})
-		return
+		return apierrors.NewBadRequest("missing X-User-ID header", nil)
 	}
+
 	// Fetch existing profile to verify ownership
 	existing, err := h.svc.GetProfile(c.Request.Context(), userID)
 	if err != nil {
 		if err == usecases.ErrNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return apierrors.NewNotFound(err.Error())
 		}
-		return
+		return apierrors.NewInternal(err)
 	}
 	if existing.UserID != userID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized to delete this profile"})
-		return
+		return apierrors.NewForbidden("unauthorized to delete this profile")
 	}
 
 	if err := h.svc.DeleteProfile(c.Request.Context(), userID); err != nil {
 		if err == usecases.ErrNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return apierrors.NewNotFound(err.Error())
 		}
-		return
+		return apierrors.NewInternal(err)
 	}
 	c.Status(http.StatusNoContent)
+	return nil
 }
