@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/post.dart';
 import '../models/user.dart';
+import '../models/comment.dart';
 
 class ApiService {
   final String _baseUrl = 'http://5.159.102.12:8080';
